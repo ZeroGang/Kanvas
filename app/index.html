@@ -1,0 +1,625 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanvas</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@4"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+<link rel="stylesheet" href="style.css?v=kanvas1">
+</head>
+<body data-theme="dark">
+
+<div class="ld-ov" id="ldOv">
+  <img class="ld-logo-icon" src="app.png" alt="" width="72" height="72" decoding="async">
+  <div class="ld-brand">Kanvas</div>
+  <div class="ld-txt" id="ldTxt" data-i="loading">加载中…</div>
+  <div class="ld-bar-wrap"><div class="ld-bar-fill"></div></div>
+</div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img class="kanvas-logo-icon" src="app.png" alt="" width="36" height="36" decoding="async">
+    <div class="sidebar-brand">
+      <span class="sidebar-title">Kanvas</span>
+      <span class="sidebar-subtitle" data-i="subTitle">定投策略面板</span>
+      <span class="meta sidebar-last-up" id="lastUp" data-last-up></span>
+    </div>
+  </div>
+  <nav class="sidebar-nav" id="sidebarNav">
+    <div class="nav-slider" id="navSlider"></div>
+    <a class="nav-item active" data-page="overview" href="#" onclick="switchPage('overview');return false;">
+      <i class="ph ph-squares-four"></i>
+      <span data-i="navOverview">概览</span>
+    </a>
+    <a class="nav-item" data-page="spot" href="#" onclick="switchPage('spot');return false;">
+      <i class="ph ph-chart-line"></i>
+      <span data-i="navSpot">行情</span>
+    </a>
+    <a class="nav-item" data-page="holdings" href="#" onclick="switchPage('holdings');return false;">
+      <i class="ph ph-wallet"></i>
+      <span data-i="navHoldings">持有</span>
+    </a>
+    <a class="nav-item" data-page="strategy" href="#" onclick="switchPage('strategy');return false;">
+      <i class="ph ph-sliders"></i>
+      <span data-i="navStrategy">策略</span>
+    </a>
+    <a class="nav-item" data-page="backtest" href="#" onclick="switchPage('backtest');return false;">
+      <i class="ph ph-chart-line-up"></i>
+      <span data-i="navBacktest">回测</span>
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <button type="button" class="sidebar-btn" onclick="toggleLang()" id="langBtn" title="Language">
+      <i class="ph ph-translate"></i> <span>EN</span>
+    </button>
+    <button type="button" class="sidebar-btn" onclick="toggleTheme()" id="themeBtn" title="Theme">
+      <i class="ph ph-moon"></i>
+    </button>
+    <button type="button" class="sidebar-btn" onclick="refreshAll()" title="Refresh">
+      <i class="ph ph-arrows-clockwise"></i>
+    </button>
+  </div>
+</aside>
+
+<main class="main" id="main">
+  <header class="page-header">
+    <div class="page-header-left">
+      <span class="meta page-header-last-up-narrow" data-last-up aria-hidden="true"></span>
+    </div>
+  </header>
+
+  <!-- 概览：计算 + 统计 -->
+  <div class="page active" id="page-overview">
+    <div class="stat-cards">
+      <div class="stat-card card">
+        <div class="stat-header">
+          <div class="stat-icon si-a"><i class="ph ph-currency-circle-dollar"></i></div>
+          <button type="button" class="stat-refresh-btn" id="ovPriceRefreshBtn" onclick="refreshOverviewLastPrice()">
+            <i class="ph ph-arrows-clockwise"></i>
+          </button>
+        </div>
+        <div class="stat-value" id="stLastPrice">—</div>
+        <div class="stat-value-asof" id="ovLastPriceAsOf"></div>
+        <div class="stat-label stat-label--with-suffix"><span data-i="ovLastPrice">最新价</span><span id="ovLastPriceUnit" class="stat-label-suffix"></span></div>
+      </div>
+      <div class="stat-card card">
+        <div class="stat-header"><div class="stat-icon si-b"><i class="ph ph-chart-bar"></i></div></div>
+        <div class="stat-value" id="stMa">—</div>
+        <div class="stat-label" data-i="maPeriod">均线周期</div>
+      </div>
+      <div class="stat-card card">
+        <div class="stat-header"><div class="stat-icon si-g"><i class="ph ph-database"></i></div></div>
+        <div class="stat-value" id="stBars">—</div>
+        <div class="stat-label" data-i="spotBars">本地 K 线</div>
+      </div>
+      <div class="stat-card card">
+        <div class="stat-header"><div class="stat-icon si-p"><i class="ph ph-tag"></i></div></div>
+        <div class="stat-value stat-value--spot-name" id="stSpotName">—</div>
+        <div class="stat-label" data-i="spotActiveName">当前品种</div>
+      </div>
+    </div>
+
+    <div class="card sec">
+      <div class="sec-header">
+        <div>
+          <div class="sec-title"><i class="ph ph-calculator"></i> <span data-i="calcPageTitle">计算</span></div>
+          <div class="sec-desc" data-i="calcPageDesc"></div>
+        </div>
+      </div>
+      <div class="calc-tool-grid">
+        <button type="button" class="calc-tool-card" data-calc-modal="calcTodayModal">
+          <i class="ph ph-play"></i>
+          <span data-i="todayCalc">测算</span>
+        </button>
+        <button type="button" class="calc-tool-card" data-calc-modal="calcReturnModal">
+          <i class="ph ph-trend-up"></i>
+          <span data-i="calcBlock1Title">计算收益率</span>
+        </button>
+        <button type="button" class="calc-tool-card" data-calc-modal="calcDrawdownModal">
+          <i class="ph ph-trend-down"></i>
+          <span data-i="calcBlock2Title">计算回撤率</span>
+        </button>
+        <button type="button" class="calc-tool-card" data-calc-modal="calcCompoundModal">
+          <i class="ph ph-coins"></i>
+          <span data-i="calcCompoundToolBtn">投资复利计算器</span>
+        </button>
+        <button type="button" class="calc-tool-card" data-calc-modal="calcLoanModal">
+          <i class="ph ph-house-line"></i>
+          <span>贷款计算器</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 行情 -->
+  <div class="page" id="page-spot">
+    <div class="card sec">
+      <div class="sec-header">
+        <div>
+          <div class="sec-title"><i class="ph ph-chart-line"></i> <span data-i="spotTitle">行情</span></div>
+          <div class="sec-desc" id="spotMeta">—</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn btn-accent" onclick="refreshActiveSpotMarket()"><i class="ph ph-arrows-clockwise"></i> <span data-i="btnFetch">刷新行情</span></button>
+          <button type="button" class="btn spot-metal-only" onclick="exportSpotAkshareInstrumentsCsv()" title="AkShare 品种表"><i class="ph ph-download-simple"></i> <span data-i="btnExportSpotAkCsv">导出 AK 品类 CSV</span></button>
+        </div>
+      </div>
+      <div class="spot-market-tabs" role="tablist" aria-label="market kind">
+        <button type="button" class="spot-market-tab is-active" role="tab" data-spot-tab="metal" data-i="spotTabMetal" onclick="switchSpotMarketTab('metal');return false;">贵金属</button>
+        <button type="button" class="spot-market-tab" role="tab" data-spot-tab="cn" data-i="spotTabCnIndex" onclick="switchSpotMarketTab('cn');return false;">A 股指数</button>
+      </div>
+      <div class="spot-instruments-block" id="spotMetalSection">
+        <div class="spot-instruments-label" data-i="spotCategory">交易品类</div>
+        <div class="spot-instrument-list" id="spotInstrumentList" role="list"></div>
+      </div>
+      <div class="spot-instruments-block" id="spotCnIndexSection" style="display:none">
+        <div class="spot-instruments-label" data-i="spotCnCategory">关注指数</div>
+        <div class="spot-instrument-list" id="cnIndexInstrumentList" role="list"></div>
+      </div>
+      <div class="kanvas-form-grid" style="max-width:400px">
+        <div class="filter-group">
+          <label data-i="spotDays">显示交易日</label>
+          <input type="number" class="filter-input" id="spotDays" min="7" max="365" value="60">
+        </div>
+        <div class="filter-group">
+          <button type="button" class="btn" onclick="renderActiveSpotChart()"><i class="ph ph-arrows-clockwise"></i> <span data-i="btnRedraw">重绘</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="card chart-section">
+      <div class="ch-wrap ch-wrap-tall"><div id="chartSpot"></div></div>
+    </div>
+  </div>
+
+  <!-- 策略（原设置：参数与 JSON） -->
+  <div class="page" id="page-strategy">
+    <div class="settings-page">
+      <div class="card sec">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title"><i class="ph ph-sliders"></i> <span data-i="settingsTitle">策略参数</span></div>
+          </div>
+          <div class="sec-header-right">
+            <button type="button" class="btn btn-accent" onclick="saveSettingsForm()"><i class="ph ph-floppy-disk"></i> <span data-i="btnSaveSettings">保存策略</span></button>
+          </div>
+        </div>
+        <div class="settings-params-inner">
+          <div class="kanvas-form-grid settings-form-tight">
+            <div class="filter-group">
+              <label data-i="stLabelBase">基础定投金额（元）</label>
+              <input type="number" class="filter-input" id="stBaseAmount" min="1" step="1">
+            </div>
+            <div class="filter-group">
+              <label data-i="stLabelMa">均线周期（交易日）</label>
+              <input type="number" class="filter-input" id="stMaPeriod" min="2" max="600" step="1">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card sec settings-subcard">
+        <div class="settings-subcard-title" data-i="settingsTh">偏离度 → 定投倍数</div>
+        <div class="tw settings-th-scroll">
+          <table class="settings-th-table">
+            <thead>
+              <tr>
+                <th data-i="thColZone">区间</th>
+                <th data-i="thColMin">最小 %</th>
+                <th data-i="thColMax">最大 %</th>
+                <th data-i="thColMult">倍数</th>
+              </tr>
+            </thead>
+            <tbody id="tbStThresholds">
+              <tr><td><span data-i="thZone0">深度超跌</span></td><td><input type="number" class="filter-input settings-th-input" id="th0min" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th0max" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th0mult" step="any"></td></tr>
+              <tr><td><span data-i="thZone1">相对低估</span></td><td><input type="number" class="filter-input settings-th-input" id="th1min" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th1max" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th1mult" step="any"></td></tr>
+              <tr><td><span data-i="thZone2">正常区间</span></td><td><input type="number" class="filter-input settings-th-input" id="th2min" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th2max" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th2mult" step="any"></td></tr>
+              <tr><td><span data-i="thZone3">相对高估</span></td><td><input type="number" class="filter-input settings-th-input" id="th3min" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th3max" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th3mult" step="any"></td></tr>
+              <tr><td><span data-i="thZone4">明显高估</span></td><td><input type="number" class="filter-input settings-th-input" id="th4min" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th4max" step="any"></td><td><input type="number" class="filter-input settings-th-input" id="th4mult" step="any"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card sec settings-subcard">
+        <div class="settings-subcard-title" data-i="settingsTp">止盈与回撤</div>
+        <div class="settings-tp-enable-row kanvas-form-grid settings-form-tight">
+          <div class="filter-group">
+            <label class="settings-tp-check-label"><input type="checkbox" id="stTpLevelsEnabled" checked> <span data-i="stTpEnableLevels">启用分档止盈</span></label>
+          </div>
+        </div>
+        <div id="tpLevelsBlock">
+          <div id="tpLevelsWrap" class="settings-tp-list"></div>
+          <div class="settings-tp-actions">
+            <button type="button" class="btn" id="stTpAddRowBtn" onclick="addSettingsTpRow()"><i class="ph ph-plus"></i> <span data-i="stBtnAddTp">添加止盈档位</span></button>
+          </div>
+        </div>
+        <div id="tpPullbackBlock">
+          <div class="filter-group settings-tp-pullback-enable">
+            <label class="settings-tp-check-label"><input type="checkbox" id="stTpPullbackEnabled" checked> <span data-i="stTpEnablePullback">启用回撤卖出</span></label>
+          </div>
+          <div class="settings-pullback-grid kanvas-form-grid settings-form-tight">
+            <div class="filter-group">
+              <label data-i="stLabelPbPct">从高点回撤（%）触发</label>
+              <input type="number" class="filter-input" id="stTpPbPct" min="0" step="any" value="0">
+            </div>
+            <div class="filter-group">
+              <label data-i="stLabelPbSell">触发后卖出仓位（%）</label>
+              <input type="number" class="filter-input" id="stTpPbSell" min="0" max="100" step="any" value="0">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <details class="card sec settings-json-details" id="stJsonDetails">
+        <summary class="settings-json-summary"><i class="ph ph-code"></i> <span data-i="settingsJsonHint">高级：直接编辑 JSON</span></summary>
+        <p class="settings-hint" data-i="settingsJsonWarn"></p>
+        <textarea id="cfgJson" class="search-input settings-json-textarea" spellcheck="false"></textarea>
+        <div style="margin-top:12px">
+          <button type="button" class="btn" onclick="saveConfigJson()"><i class="ph ph-floppy-disk"></i> <span data-i="saveJson">保存 JSON</span></button>
+        </div>
+      </details>
+
+      <div class="card sec strategy-records-card">
+        <div class="sec-header">
+          <div class="saved-page-head">
+            <div class="sec-title"><i class="ph ph-clock-counter"></i> <span data-i="recordsTitle">记录</span></div>
+          </div>
+        </div>
+        <div class="tw saved-table-wrap">
+          <table class="saved-strategy-table">
+            <thead>
+              <tr>
+                <th data-i="colSavedAt">保存时间</th>
+                <th data-i="colStratSummary">策略摘要</th>
+                <th class="saved-th-actions"></th>
+              </tr>
+            </thead>
+            <tbody id="tbSaved"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 回测 -->
+  <div class="page" id="page-backtest">
+    <div class="card sec">
+      <div class="sec-header">
+        <div>
+          <div class="sec-title"><i class="ph ph-chart-line-up"></i> <span data-i="backtestRun">运行回测</span></div>
+          <div class="sec-desc" data-i="backtestRunDesc">使用当前策略参数与本地 CSV 行情</div>
+        </div>
+      </div>
+      <div class="kanvas-form-grid">
+        <div class="filter-group">
+          <label data-i="backtestDays">回测天数</label>
+          <input type="number" class="filter-input" id="btDays" min="1" value="120">
+        </div>
+        <div class="filter-group">
+          <button type="button" class="btn btn-accent" onclick="runBacktest()"><i class="ph ph-play"></i> <span data-i="btnRunBacktest">开始回测</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="card chart-section" id="btSummaryCard" style="display:none">
+      <div class="chart-header">
+        <div><div class="sec-title" data-i="btMetrics">关键指标</div></div>
+      </div>
+      <div id="btMetrics" class="report-grid"></div>
+    </div>
+    <div class="card chart-section" id="btChartCard" style="display:none">
+      <div class="chart-header">
+        <div><div class="sec-title" data-i="equityCurve">权益曲线</div></div>
+      </div>
+      <div class="ch-wrap ch-wrap-tall"><div id="chartEquity"></div></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-ov" id="calcTodayModal" aria-hidden="true">
+  <div class="modal-sheet" data-calc-size="standard" role="dialog" aria-modal="true" aria-labelledby="calcTodayModalTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="calcTodayModalTitle"><i class="ph ph-play"></i> <span data-i="todayCalc">测算</span></h3>
+      <button type="button" class="modal-close" data-calc-close aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="kanvas-form-grid">
+        <div class="filter-group">
+          <label data-i="labelPrice">价格</label>
+          <input type="number" step="any" class="filter-input" id="inGoldPrice" placeholder="0">
+        </div>
+        <div class="filter-group">
+          <label id="labelMa">MA20</label>
+          <input type="number" step="any" class="filter-input" id="inMa" placeholder="0">
+        </div>
+        <div class="filter-group" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <button type="button" class="btn btn-accent" onclick="doCalculate()"><i class="ph ph-play"></i> <span data-i="btnCalc">计算</span></button>
+          <button type="button" class="btn" onclick="fillFromSpot()"><i class="ph ph-download-simple"></i> <span data-i="btnFillSpot">从行情填入</span></button>
+        </div>
+      </div>
+      <div class="kanvas-result-box" id="calcResult" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="calcReturnModal" aria-hidden="true">
+  <div class="modal-sheet" data-calc-size="standard" role="dialog" aria-modal="true" aria-labelledby="calcReturnModalTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="calcReturnModalTitle" data-i="calcBlock1Title">计算收益率</h3>
+      <button type="button" class="modal-close" data-calc-close aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="calc-sub-desc" data-i="calcBlock1Desc"></div>
+      <div class="kanvas-form-grid">
+        <div class="filter-group">
+          <label data-i="calcLabelCurNav">当前净值</label>
+          <input type="number" class="filter-input" id="calcRetCurNav" min="0" step="any" placeholder="0">
+        </div>
+        <div class="filter-group">
+          <label data-i="calcLabelTgtNav">目标净值</label>
+          <input type="number" class="filter-input" id="calcRetTgtNav" min="0" step="any" placeholder="0">
+        </div>
+        <div class="filter-group">
+          <label data-i="calcLabelResultReturn">当前 -> 目标 收益率</label>
+          <div class="calc-out mono" id="calcRetOut">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="calcDrawdownModal" aria-hidden="true">
+  <div class="modal-sheet" data-calc-size="standard" role="dialog" aria-modal="true" aria-labelledby="calcDrawdownModalTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="calcDrawdownModalTitle" data-i="calcBlock2Title">计算回撤率</h3>
+      <button type="button" class="modal-close" data-calc-close aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="calc-sub-desc" data-i="calcBlock2Desc"></div>
+      <div class="kanvas-form-grid">
+        <div class="filter-group">
+          <label data-i="calcLabelHighNav">最高净值</label>
+          <input type="number" class="filter-input" id="calcDdHighNav" min="0" step="any" placeholder="0">
+        </div>
+        <div class="filter-group">
+          <label data-i="calcLabelDdCurNav">当前净值</label>
+          <input type="number" class="filter-input" id="calcDdCurNav" min="0" step="any" placeholder="0">
+        </div>
+        <div class="filter-group">
+          <label data-i="calcLabelResultDrawdown">回撤率（相对峰值）</label>
+          <div class="calc-out mono" id="calcDdOut">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="calcCompoundModal" aria-hidden="true">
+  <div class="modal-sheet calc-ci-sheet" data-calc-size="large" role="dialog" aria-modal="true" aria-labelledby="calcCompoundModalTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="calcCompoundModalTitle"><i class="ph ph-seedling"></i> <span data-i="calcCompoundToolBtn">投资复利计算器</span></h3>
+      <button type="button" class="modal-close" data-calc-close aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body calc-ci-body">
+      <section class="calc-ci-config">
+        <div class="calc-ci-section-title"><i class="ph ph-sliders-horizontal"></i> 策略配置</div>
+        <div class="filter-group">
+          <label><i class="ph ph-piggy-bank"></i> 初始本金</label>
+          <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="calcCiPrincipal" min="0" step="any" value="500000"><span>￥</span></div>
+        </div>
+        <div class="filter-group">
+          <label><i class="ph ph-hand-coins"></i> 每月追加定投</label>
+          <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="calcCiMonthly" min="0" step="any" value="10000"><span>￥</span></div>
+        </div>
+        <div class="filter-group">
+          <label><i class="ph ph-percent"></i> 预期年化收益率</label>
+          <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="calcCiRatePct" step="any" value="15"><span>%</span></div>
+        </div>
+        <div class="filter-group">
+          <label><i class="ph ph-repeat"></i> 复利方式</label>
+          <div class="calc-ci-compound-mode" role="radiogroup" aria-label="复利方式">
+            <label><input type="radio" name="calcCiMode" value="monthly" checked> 按月复利</label>
+            <label><input type="radio" name="calcCiMode" value="yearly"> 按年复利</label>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label><i class="ph ph-calendar"></i> 投资时长: <b id="calcCiYearsLabel">10 年</b></label>
+          <input type="range" class="calc-ci-range" id="calcCiPeriods" min="1" max="30" step="1" value="10">
+        </div>
+        <div class="calc-ci-presets">
+          <div class="calc-ci-section-title"><i class="ph ph-clock-counter-clockwise"></i> 参考历史指数</div>
+          <div class="calc-ci-preset-row">
+            <button type="button" class="calc-ci-preset" data-ci-rate="10"><i class="ph ph-chart-line-up"></i> 标普500 (10%)</button>
+            <button type="button" class="calc-ci-preset" data-ci-rate="15"><i class="ph ph-rocket-launch"></i> 纳指100 (15%)</button>
+            <button type="button" class="calc-ci-preset" data-ci-rate="3.5"><i class="ph ph-shield-check"></i> 稳健理财 (3.5%)</button>
+          </div>
+        </div>
+      </section>
+      <section class="calc-ci-result">
+        <div class="calc-ci-hero">
+          <div class="calc-ci-hero-label"><i class="ph ph-flag-checkered"></i> 到期预估总资产</div>
+          <div class="calc-ci-hero-value" id="calcCiTotalOut">—</div>
+        </div>
+        <div class="calc-ci-chart" id="calcCiChart"></div>
+        <div class="calc-ci-summary">
+          <div class="calc-ci-summary-row"><span><i class="ph ph-wallet"></i> 累计投入本金</span><b id="calcCiInvestedOut">—</b></div>
+          <div class="calc-ci-summary-row"><span><i class="ph ph-coins"></i> 累计复利收益</span><b class="calc-ci-profit" id="calcCiProfitOut">—</b></div>
+          <div class="calc-ci-summary-row"><span><i class="ph ph-trend-up"></i> 复利收益率</span><b id="calcCiReturnOut">—</b></div>
+        </div>
+        <div class="calc-ci-note"><i class="ph ph-info"></i> <span id="calcCiModeNote">计算基于月度复利，历史表现不代表未来收益。</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="calcLoanModal" aria-hidden="true">
+  <div class="modal-sheet calc-loan-sheet" data-calc-size="large" role="dialog" aria-modal="true" aria-labelledby="calcLoanModalTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="calcLoanModalTitle"><i class="ph ph-house-line"></i> 贷款计算器</h3>
+      <button type="button" class="modal-close" data-calc-close aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body calc-loan-body">
+      <section class="calc-loan-form">
+        <div class="calc-ci-section-title"><i class="ph ph-sliders-horizontal"></i> 贷款模式</div>
+        <div class="calc-loan-tabs" role="tablist" aria-label="贷款模式">
+          <button type="button" class="is-active" data-loan-mode="commercial">商业贷款</button>
+          <button type="button" data-loan-mode="fund">公积金贷款</button>
+          <button type="button" data-loan-mode="combo">组合贷款</button>
+        </div>
+        <div class="kanvas-form-grid calc-loan-grid" id="loanSingleFields">
+          <div class="filter-group">
+            <label><i class="ph ph-house"></i> 贷款金额（万元）</label>
+            <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="loanAmount" min="0" step="any" value="33"><span>￥</span></div>
+          </div>
+          <div class="filter-group">
+            <label><i class="ph ph-percent"></i> 年利率（%）</label>
+            <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="loanRate" min="0" step="any" value="2.85"><span>%</span></div>
+          </div>
+        </div>
+        <div class="kanvas-form-grid calc-loan-grid calc-loan-combo-fields" id="loanComboFields" style="display:none">
+          <div class="filter-group">
+            <label><i class="ph ph-building-office"></i> 商业贷款金额（万元）</label>
+            <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="loanCommercialAmount" min="0" step="any" value="70"><span>￥</span></div>
+          </div>
+          <div class="filter-group">
+            <label><i class="ph ph-percent"></i> 商业贷款年利率（%）</label>
+            <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="loanCommercialRate" min="0" step="any" value="3.05"><span>%</span></div>
+          </div>
+          <div class="filter-group">
+            <label><i class="ph ph-bank"></i> 公积金贷款金额（万元）</label>
+            <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="loanFundAmount" min="0" step="any" value="30"><span>￥</span></div>
+          </div>
+          <div class="filter-group">
+            <label><i class="ph ph-percent"></i> 公积金贷款年利率（%）</label>
+            <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="loanFundRate" min="0" step="any" value="2.85"><span>%</span></div>
+          </div>
+        </div>
+        <div class="kanvas-form-grid calc-loan-grid">
+          <div class="filter-group">
+            <label><i class="ph ph-calendar"></i> 贷款期限（年）</label>
+            <div class="calc-ci-input-wrap"><input type="number" class="filter-input" id="loanYears" min="1" max="40" step="1" value="10"><span>年</span></div>
+          </div>
+          <div class="filter-group">
+            <label><i class="ph ph-arrows-left-right"></i> 还款方式</label>
+            <select class="filter-input" id="loanRepayType">
+              <option value="equal_payment">等额本息</option>
+              <option value="equal_principal">等额本金</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="btn btn-accent calc-loan-run" id="loanCalcBtn"><i class="ph ph-calculator"></i> 立即计算</button>
+      </section>
+      <section class="calc-loan-result">
+        <div class="calc-loan-result-title"><i class="ph ph-chart-pie-slice"></i> 还款概览</div>
+        <div class="calc-loan-summary-grid">
+          <div><span><i class="ph ph-money"></i> 月供</span><b id="loanMonthlyOut">—</b></div>
+          <div><span><i class="ph ph-stack"></i> 总还款</span><b id="loanTotalOut">—</b></div>
+          <div><span><i class="ph ph-percent"></i> 总利息</span><b id="loanInterestOut">—</b></div>
+        </div>
+        <div class="calc-loan-result-title"><i class="ph ph-table"></i> 还款明细表</div>
+        <div class="calc-loan-table-wrap">
+          <table class="calc-loan-table">
+            <thead><tr><th>期数</th><th>月供（元）</th><th>本金（元）</th><th>利息（元）</th><th>剩余本金（元）</th></tr></thead>
+            <tbody id="loanScheduleBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="spotInstrumentsModal" aria-hidden="true">
+  <div class="modal-sheet modal-sheet--wide" role="dialog" aria-modal="true" aria-labelledby="spotInstrumentsTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="spotInstrumentsTitle" data-i="spotInstrModalTitle">管理交易品类</h3>
+      <button type="button" class="modal-close" id="spotInstrumentsClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body modal-body--tight">
+      <p class="spot-instr-hint" data-i="spotInstrModalHint">代码与中英文名称、单位由系统目录固定，不可编辑；请从下方下拉添加品种，并可排序、删除。保存后写入 app/dist/config/config.json。</p>
+      <div class="spot-instr-table-wrap">
+        <table class="spot-instr-table">
+          <thead>
+            <tr>
+              <th class="spot-instr-th-order" data-i="spotInstrColOrder">顺序</th>
+              <th data-i="spotInstrColId">代码</th>
+              <th data-i="spotInstrColLabelZh">中文名</th>
+              <th data-i="spotInstrColLabelEn">英文名</th>
+              <th data-i="spotInstrColUnitZh">单位(中)</th>
+              <th data-i="spotInstrColUnitEn">单位(英)</th>
+              <th class="spot-instr-th-act"></th>
+            </tr>
+          </thead>
+          <tbody id="spotInstrTbody"></tbody>
+        </table>
+      </div>
+      <div class="spot-instr-toolbar">
+        <select id="spotInstrPick" class="filter-input spot-instr-pick" aria-label="Pick symbol"></select>
+        <button type="button" class="btn btn-ghost btn-sm" id="spotInstrAddBtn"><i class="ph ph-plus"></i> <span data-i="spotInstrAddBtn">添加</span></button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="spotInstrReset"><span data-i="spotInstrResetDefault">恢复默认</span></button>
+      <button type="button" class="btn" id="spotInstrCancel"><span data-i="spotInstrCancel">取消</span></button>
+      <button type="button" class="btn btn-accent" id="spotInstrSave"><span data-i="spotInstrSave">保存</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="cnAIndexModal" aria-hidden="true">
+  <div class="modal-sheet modal-sheet--wide" role="dialog" aria-modal="true" aria-labelledby="cnAIndexTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="cnAIndexTitle" data-i="cnIndexModalTitle">管理 A 股指数列表</h3>
+      <button type="button" class="modal-close" id="cnAIndexClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body modal-body--tight">
+      <p class="spot-instr-hint" data-i="cnIndexModalHint">代码与中英文名称、交易所由系统目录固定；从下拉添加，可排序、删除。保存后写入 app/dist/config/config.json 的 cn_a_index_ids。</p>
+      <div class="spot-instr-table-wrap">
+        <table class="spot-instr-table">
+          <thead>
+            <tr>
+              <th class="spot-instr-th-order" data-i="spotInstrColOrder">顺序</th>
+              <th data-i="spotInstrColId">代码</th>
+              <th data-i="spotInstrColLabelZh">中文名</th>
+              <th data-i="spotInstrColLabelEn">英文名</th>
+              <th data-i="cnIndexColExZh">交易所(中)</th>
+              <th data-i="cnIndexColExEn">交易所(英)</th>
+              <th class="spot-instr-th-act"></th>
+            </tr>
+          </thead>
+          <tbody id="cnAIndexTbody"></tbody>
+        </table>
+      </div>
+      <div class="spot-instr-toolbar">
+        <select id="cnAIndexPick" class="filter-input spot-instr-pick" aria-label="Pick index"></select>
+        <button type="button" class="btn btn-ghost btn-sm" id="cnAIndexAddBtn"><i class="ph ph-plus"></i> <span data-i="spotInstrAddBtn">添加</span></button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="cnAIndexReset"><span data-i="spotInstrResetDefault">恢复默认</span></button>
+      <button type="button" class="btn" id="cnAIndexCancel"><span data-i="spotInstrCancel">取消</span></button>
+      <button type="button" class="btn btn-accent" id="cnAIndexSave"><span data-i="spotInstrSave">保存</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="savedDetailModal" aria-hidden="true">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="savedDetailTitle">
+    <div class="modal-head">
+      <h3 class="modal-title" id="savedDetailTitle" data-i="savedDetailTitle">策略详情</h3>
+      <button type="button" class="modal-close" id="savedDetailClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="savedDetailBody"></div>
+    <div class="modal-foot" id="savedDetailFoot">
+      <button type="button" class="btn btn-accent" id="savedDetailReplay"><span data-i="savedModalReplay">回测</span></button>
+      <button type="button" class="btn" id="savedDetailApply"><span data-i="savedModalApply">应用到策略</span></button>
+      <button type="button" class="btn btn-ghost saved-modal-del" id="savedDetailDelete"><span data-i="savedModalDel">删除</span></button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js?v=kanvas1"></script>
+</body>
+</html>
