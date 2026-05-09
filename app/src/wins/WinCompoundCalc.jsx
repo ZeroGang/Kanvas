@@ -199,7 +199,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <section>
           <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-            <div className="filter-group" style={{ flex: 1 }}>
+            <div className="filter-group" style={{ flex: 1, minWidth: 0 }}>
               <label><i className="ph ph-piggy-bank" /> {t('calcCompoundPrincipal')}</label>
               <div className="calc-ci-input-wrap">
                 <input
@@ -213,7 +213,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
                 <span>￥</span>
               </div>
             </div>
-            <div className="filter-group" style={{ flex: 1 }}>
+            <div className="filter-group" style={{ flex: 1, minWidth: 0 }}>
               <label><i className="ph ph-hand-coins" /> {t('calcCompoundMonthly')}</label>
               <div className="calc-ci-input-wrap">
                 <input
@@ -227,7 +227,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
                 <span>￥</span>
               </div>
             </div>
-            <div className="filter-group" style={{ flex: 1 }}>
+            <div className="filter-group" style={{ flex: 1, minWidth: 0 }}>
               <label><i className="ph ph-percent" /> {t('calcCompoundRate')}</label>
               <div className="calc-ci-input-wrap">
                 <input
@@ -263,15 +263,10 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
               step="1"
             />
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '8px' }}>
-              <i className="ph ph-clock-counter-clockwise" /> {t('calcCompoundHistoryRef')}
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button type="button" className="btn" onClick={() => setCiRatePct(10)}><i className="ph ph-chart-line-up" /> {t('calcCompoundSnp500')}</button>
-              <button type="button" className="btn" onClick={() => setCiRatePct(15)}><i className="ph ph-rocket-launch" /> {t('calcCompoundNasdaq100')}</button>
-              <button type="button" className="btn" onClick={() => setCiRatePct(3.5)}><i className="ph ph-shield-check" /> {t('calcCompoundStable')}</button>
-            </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <button type="button" className="btn" onClick={() => setCiRatePct(10)}><i className="ph ph-chart-line-up" /> {t('calcCompoundSnp500')}</button>
+            <button type="button" className="btn" onClick={() => setCiRatePct(15)}><i className="ph ph-rocket-launch" /> {t('calcCompoundNasdaq100')}</button>
+            <button type="button" className="btn" onClick={() => setCiRatePct(3.5)}><i className="ph ph-shield-check" /> {t('calcCompoundStable')}</button>
           </div>
           <div>
             <button type="button" className="btn btn-accent" onClick={calculateCompound}>
