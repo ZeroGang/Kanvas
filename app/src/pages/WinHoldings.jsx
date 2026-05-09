@@ -31,7 +31,7 @@ export function WinHoldings({ t }) {
             <i className="ph ph-coins" /> <span>{t('calcCompoundToolBtn')}</span>
           </button>
           <button type="button" className="calc-tool-card" onClick={() => setActiveModal('loan')}>
-            <i className="ph ph-house-line" /> <span>贷款计算器</span>
+            <i className="ph ph-house-line" /> <span>{t('calcLoanTitle')}</span>
           </button>
         </div>
       </div>
@@ -40,7 +40,7 @@ export function WinHoldings({ t }) {
       <WinReturnCalc t={t} isOpen={activeModal === 'return'} onClose={() => setActiveModal(null)} />
       <WinDrawdownCalc t={t} isOpen={activeModal === 'drawdown'} onClose={() => setActiveModal(null)} />
       <WinCompoundCalc t={t} isOpen={activeModal === 'compound'} onClose={() => setActiveModal(null)} />
-      <WinLoanCalc isOpen={activeModal === 'loan'} onClose={() => setActiveModal(null)} />
+      <WinLoanCalc t={t} isOpen={activeModal === 'loan'} onClose={() => setActiveModal(null)} />
     </>
   );
 }
