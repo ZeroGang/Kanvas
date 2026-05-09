@@ -19,7 +19,7 @@ export function WinHoldings({ t }) {
         </div>
         <div className="calc-tool-grid">
           <button type="button" className="calc-tool-card" onClick={() => setActiveModal('today')}>
-            <i className="ph ph-play" /> <span>{t('todayCalc')}</span>
+            <i className="ph ph-chart-line-up" /> <span>{t('calcMaBlockTitle')}</span>
           </button>
           <button type="button" className="calc-tool-card" onClick={() => setActiveModal('return')}>
             <i className="ph ph-trend-up" /> <span>{t('calcBlock1Title')}</span>

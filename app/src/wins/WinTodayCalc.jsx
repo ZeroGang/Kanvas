@@ -25,10 +25,10 @@ export default function WinTodayCalc({ t, isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <WinModal title={t('todayCalc')} onClose={onClose}>
+    <WinModal title={t('calcMaDevTitle')} onClose={onClose}>
       <CompFormGrid>
         <CompInput
-          label={t('labelPrice')}
+          label={t('calcMaLabelPrice')}
           value={todayPrice}
           onChange={e => setTodayPrice(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && calculateToday()}
@@ -52,20 +52,20 @@ export default function WinTodayCalc({ t, isOpen, onClose }) {
       {todayResult && (
         <CompResultBox>
           <CompResultRow
-            label="当前价格"
+            label={t('calcMaLabelPrice')}
             value={todayResult.price.toFixed(2)}
           />
           <CompResultRow
-            label="均线价格"
+            label={t('calcMaLabelMa')}
             value={todayResult.ma.toFixed(2)}
           />
           <CompResultRow
-            label="偏离度"
+            label={t('calcMaLabelDev')}
             value={`${todayResult.dev.toFixed(2)}%`}
             color={todayResult.dev < 0 ? '#ef4444' : '#22c55e'}
           />
           <CompResultRow
-            label="建议定投倍数"
+            label={t('calcMaLabelMult')}
             value={`${todayResult.mult.toFixed(1)}x`}
             highlight
           />

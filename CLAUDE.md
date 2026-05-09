@@ -101,10 +101,26 @@ Kanvas/                    # 项目根目录
 
 ## 入口与运行
 
-- 先启动后端：`python main.py`
-- 再启动前端（在 `app/` 目录）：`npm install && npm run dev`
-- 访问浏览器显示的地址即可使用
-- `python main.py --cli` 或 `python server/cli.py --cli`：命令行交互（可选）。
+### 启动步骤
+1. **先启动后端**：在项目根目录运行 `python main.py`
+2. **再启动前端**：在 `app/` 目录运行 `npm install && npm run dev`
+3. **访问应用**：在浏览器中打开显示的地址即可使用
+4. **命令行模式**：`python main.py --cli` 或 `python server/cli.py --cli`（可选）
+
+### 开发说明
+**重要：修改代码后需要重启服务**
+
+- **修改后端代码**（`server/` 目录下的文件）：
+  - 需要停止并重新运行后端：`python main.py`
+  - 前端开发服务器会自动热重载，不需要重启
+
+- **修改前端代码**（`app/src/` 目录下的文件）：
+  - Vite 开发服务器会自动热重载，无需重启
+  - 修改 `index.html`、`style.css`、`vite.config.js` 等配置文件时，可能需要刷新浏览器
+
+- **全部修改完成后**：
+  - 建议完全重启前后端以确保所有更改生效
+  - 停止现有进程（Ctrl+C），然后重新启动后端和前端
 
 ---
 
