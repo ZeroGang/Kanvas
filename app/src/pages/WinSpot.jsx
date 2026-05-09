@@ -1,51 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
-import ReactECharts from 'echarts-for-react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 
 export function WinSpot({ t }) {
   const [activeTab, setActiveTab] = useState('metal');
-  const [marketStatus, setMarketStatus] = useState(null);
-  const [realtimePrice, setRealtimePrice] = useState(null);
   const [spotInstruments, setSpotInstruments] = useState([]);
   const [cnIndexInstruments, setCnIndexInstruments] = useState([]);
-  const [seriesData, setSeriesData] = useState([]);
-  const [days, setDays] = useState(60);
-  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [spotCatalog, setSpotCatalog] = useState([]);
   const [cnCatalog, setCnCatalog] = useState([]);
   const [marketList, setMarketList] = useState([]);
-  
-  const chartRef = useRef(null);
 
-  // 加载市场状态和实时价格
-  const loadMarketData = async () => {
+  // 加载基础数据
+  const loadBaseData = async () => {
     try {
-      const [statusRes, priceRes, spotRes, cnRes] = await Promise.all([
-        api('/api/market/status'),
-        api(`/api/market/realtime-price?tab=${activeTab}`),
+      const [spotRes, cnRes] = await Promise.all([
         api('/api/spot/instruments'),
         api('/api/cn-a-index/instruments')
       ]);
 
-      if (statusRes.ok) {
-        // 适配后端API格式
-        setMarketStatus({
-          ma_period: 20, // 默认值
-          bars: statusRes.bar_count,
-          active_name: statusRes.symbol,
-          as_of: statusRes.last_bar_date,
-          meta: `数据来源: ${statusRes.source}, 品种: ${statusRes.symbol}`,
-          ...statusRes
-        });
-      }
-      if (priceRes.ok) {
-        // 适配后端API格式
-        setRealtimePrice({
-          last_price: priceRes.price,
-          ...priceRes
-        });
-      }
       if (spotRes.ok) {
         if (spotRes.items) {
           setSpotInstruments(spotRes.items);
@@ -63,9 +35,7 @@ export function WinSpot({ t }) {
         }
       }
     } catch (err) {
-      console.error('加载市场数据失败:', err);
-    } finally {
-      setLoading(false);
+      console.error('加载基础数据失败:', err);
     }
   };
 
@@ -107,8 +77,7 @@ export function WinSpot({ t }) {
     });
     
     // 刷新数据
-    await loadMarketData();
-    await loadChartData();
+    await loadMarketList();
   };
 
   // 重置为默认品种
@@ -118,77 +87,12 @@ export function WinSpot({ t }) {
       method: 'POST',
       body: JSON.stringify({ reset_default: true })
     });
-    await loadMarketData();
-  };
-
-  // 加载图表数据
-  const loadChartData = async () => {
-    try {
-      const endpoint = activeTab === 'metal' 
-        ? `/api/spot-series?days=${days}` 
-        : `/api/cn-index-series?days=${days}`;
-      
-      const res = await api(endpoint);
-      if (res.ok && res.series) {
-        // 适配后端API格式：后端返回 [dates, prices]
-        let mappedSeries = [];
-        if (Array.isArray(res.series) && res.series.length === 2) {
-          const [dates, prices] = res.series;
-          // 计算MA20
-          const ma20 = [];
-          for (let i = 0; i < prices.length; i++) {
-            let sum = 0;
-            let count = 0;
-            for (let j = Math.max(0, i - 19); j <= i; j++) {
-              sum += prices[j];
-              count++;
-            }
-            ma20.push(count > 0 ? sum / count : null);
-          }
-          // 转换为前端格式
-          mappedSeries = dates.map((date, index) => ({
-            date: date,
-            price: prices[index],
-            ma: ma20[index]
-          }));
-        } else if (Array.isArray(res.series) && res.series.length > 0 && res.series[0].date) {
-          // 已经是正确格式
-          mappedSeries = res.series;
-        }
-        setSeriesData(mappedSeries);
-      } else {
-        console.warn('图表数据加载失败:', res);
-        setSeriesData([]);
-      }
-    } catch (err) {
-      console.error('加载图表数据失败:', err);
-      setSeriesData([]);
-    }
-  };
-
-  // 获取市场数据
-  const fetchMarketData = async () => {
-    try {
-      // 获取对应标签页的数据
-      const fetchEndpoint = activeTab === 'metal' 
-        ? '/api/market/fetch' 
-        : '/api/cn-index/fetch';
-      
-      await api(fetchEndpoint, { method: 'POST', body: JSON.stringify({ force: true }) });
-      
-      // 重新加载所有数据
-      await loadMarketData();
-      await loadChartData();
-      await loadMarketList();
-    } catch (err) {
-      console.error('获取市场数据失败:', err);
-    }
+    await loadBaseData();
   };
 
   // 初始化和切换标签时加载数据
   useEffect(() => {
-    loadMarketData();
-    loadChartData();
+    loadBaseData();
     loadMarketList();
   }, [activeTab]);
 
@@ -197,173 +101,23 @@ export function WinSpot({ t }) {
     setActiveTab(tab);
   };
 
-  // 重新绘制图表
-  const handleRedraw = () => {
-    loadChartData();
-  };
-
-  // 图表配置
-  const getChartOption = () => {
-    if (!seriesData || !seriesData.length) {
-      return {
-        title: {
-          text: '暂无数据，请先点击"获取数据"按钮',
-          left: 'center',
-          textStyle: { color: '#999' }
-        }
-      };
-    }
-
-    const dates = seriesData.map(d => d.date);
-    const prices = seriesData.map(d => d.price);
-    const maValues = seriesData.map(d => d.ma);
-
-    return {
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: 'rgba(20, 24, 35, 0.95)',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        textStyle: { color: '#fff' }
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        top: '10%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: dates,
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
-        axisLabel: { color: 'rgba(255, 255, 255, 0.6)' }
-      },
-      yAxis: {
-        type: 'value',
-        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
-        axisLabel: { color: 'rgba(255, 255, 255, 0.6)' },
-        splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } }
-      },
-      series: [
-        {
-          name: t('spotLastPrice') || '价格',
-          type: 'line',
-          data: prices,
-          smooth: true,
-          lineStyle: { color: '#c9a227', width: 2 },
-          itemStyle: { color: '#c9a227' },
-          areaStyle: {
-            color: {
-              type: 'linear',
-              x: 0, y: 0, x2: 0, y2: 1,
-              colorStops: [
-                { offset: 0, color: 'rgba(201, 162, 39, 0.3)' },
-                { offset: 1, color: 'rgba(201, 162, 39, 0)' }
-              ]
-            }
-          }
-        },
-        {
-          name: `MA${marketStatus?.ma_period || 20}`,
-          type: 'line',
-          data: maValues,
-          smooth: true,
-          lineStyle: { color: '#4f9fff', width: 1.5 },
-          itemStyle: { color: '#4f9fff' }
-        }
-      ]
-    };
-  };
-
-  // 获取统计卡片显示值
-  const getStatValue = (value, fallback = '—') => {
-    if (value == null || value === '') return fallback;
-    return value;
-  };
-
   return (
     <>
-      <div className="stat-cards" style={{ marginBottom: '16px' }}>
-        <div className="stat-card card">
-          <div className="stat-header">
-            <div className="stat-icon si-a"><i className="ph ph-currency-circle-dollar" /></div>
-            <button 
-              type="button" 
-              className="stat-refresh-btn" 
-              title={t('ovRefreshPrice')} 
-              aria-label={t('ovRefreshPrice')}
-              onClick={fetchMarketData}
-            >
-              <i className="ph ph-arrows-clockwise" />
-            </button>
-          </div>
-          <div className="stat-value">
-            {getStatValue(realtimePrice?.last_price, '—')}
-          </div>
-          <div className="stat-value-asof">
-            {marketStatus?.asof ? `更新于 ${marketStatus.asof}` : ''}
-          </div>
-          <div className="stat-label stat-label--with-suffix">
-            <span>{t('ovLastPrice')}</span>
-          </div>
-        </div>
-        <div className="stat-card card">
-          <div className="stat-header">
-            <div className="stat-icon si-b"><i className="ph ph-chart-bar" /></div>
-          </div>
-          <div className="stat-value">
-            {getStatValue(marketStatus?.ma_period, '—')}
-          </div>
-          <div className="stat-label">{t('maPeriod')}</div>
-        </div>
-        <div className="stat-card card">
-          <div className="stat-header">
-            <div className="stat-icon si-g"><i className="ph ph-database" /></div>
-          </div>
-          <div className="stat-value">
-            {getStatValue(marketStatus?.bars, '—')}
-          </div>
-          <div className="stat-label">{t('spotBars')}</div>
-        </div>
-        <div className="stat-card card">
-          <div className="stat-header">
-            <div className="stat-icon si-p"><i className="ph ph-tag" /></div>
-          </div>
-          <div className="stat-value stat-value--spot-name">
-            {getStatValue(marketStatus?.active_name, '—')}
-          </div>
-          <div className="stat-label">{t('spotActiveName')}</div>
-        </div>
-      </div>
-
       <div className="card sec">
         <div className="sec-header">
           <div>
             <div className="sec-title">
               <i className="ph ph-chart-line"></i> <span>{t('spotTitle')}</span>
             </div>
-            <div className="sec-desc" id="spotMeta">
-              {marketStatus?.meta || '—'}
-            </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             <button 
               type="button" 
-              className="btn btn-accent"
-              onClick={fetchMarketData}
+              className="btn"
+              onClick={loadMarketList}
             >
-              <i className="ph ph-arrows-clockwise"></i> <span>{t('btnFetch')}</span>
+              <i className="ph ph-arrows-clockwise"></i> <span>刷新</span>
             </button>
-            {activeTab === 'metal' && (
-              <button 
-                type="button" 
-                className="btn spot-metal-only" 
-                title={t('btnExportSpotAkCsv')}
-              >
-                <i className="ph ph-download-simple"></i> <span>{t('btnExportSpotAkCsv')}</span>
-              </button>
-            )}
           </div>
         </div>
         <div className="spot-market-tabs" role="tablist" aria-label="market kind">
@@ -570,8 +324,6 @@ export function WinSpot({ t }) {
                               items: updatedList.filter(inst => inst.active).map(inst => inst.id) 
                             })
                           });
-                          await loadMarketData();
-                          await loadChartData();
                           await loadMarketList();
                         }}
                       />
@@ -604,15 +356,6 @@ export function WinSpot({ t }) {
               <div className="sec-desc">
                 实时价格及涨跌幅
               </div>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                type="button" 
-                className="btn"
-                onClick={loadMarketList}
-              >
-                <i className="ph ph-arrows-clockwise"></i> <span>刷新</span>
-              </button>
             </div>
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -656,48 +399,9 @@ export function WinSpot({ t }) {
                     </td>
                   </tr>
                 ))}
-                {/* 添加新品种行 */}
-                <tr style={{ cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} onClick={() => setShowAddModal({ type: activeTab === 'metal' ? 'spot' : 'cn' })}>
-                  <td style={{ padding: '12px 16px', color: 'var(--accent)', textAlign: 'center' }} colSpan={3}>
-                    <i className="ph ph-plus-circle"></i> <span>添加品种</span>
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
-        </div>
-        <div className="kanvas-form-grid" style={{ maxWidth: '400px' }}>
-          <div className="filter-group">
-            <label>{t('spotDays')}</label>
-            <input 
-              type="number" 
-              className="filter-input" 
-              id="spotDays" 
-              min="7" 
-              max="365" 
-              value={days}
-              onChange={(e) => setDays(parseInt(e.target.value) || 60)}
-            />
-          </div>
-          <div className="filter-group">
-            <button 
-              type="button" 
-              className="btn"
-              onClick={handleRedraw}
-            >
-              <i className="ph ph-arrows-clockwise"></i> <span>{t('btnRedraw')}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="card chart-section">
-        <div className="ch-wrap ch-wrap-tall">
-          <ReactECharts 
-            ref={chartRef}
-            option={getChartOption()} 
-            style={{ height: '100%', minHeight: '400px' }}
-            theme="dark"
-          />
         </div>
       </div>
     </>

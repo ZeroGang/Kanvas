@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactECharts from 'echarts-for-react';
 import WinModal from './WinModal';
 
@@ -13,6 +13,8 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
   const [loanRepayType, setLoanRepayType] = useState('equal_payment');
   const [loanResult, setLoanResult] = useState(null);
   const [scheduleData, setScheduleData] = useState(null);
+  const [themeKey, setThemeKey] = useState(0);
+  const chartRef = useRef(null);
 
   const calculateLoan = () => {
     let totalAmount, rate;
@@ -84,17 +86,39 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
     setScheduleData(schedule);
   };
 
+  // Listen for theme changes to re-render chart
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setThemeKey(k => k + 1);
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
+    return () => observer.disconnect();
+  }, []);
+
   const getChartOption = () => {
     if (!scheduleData) return {};
 
     const sampleInterval = Math.max(1, Math.floor(scheduleData.length / 36));
     const sampledData = scheduleData.filter((_, i) => i % sampleInterval === 0);
 
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#9ca3b0' : '#4b5563';
+    const borderColor = isDark ? 'rgba(148,163,184,0.07)' : 'rgba(15,23,42,0.07)';
+
     return {
+      backgroundColor: 'transparent',
       tooltip: {
         trigger: 'axis',
         axisPointer: {
           type: 'cross'
+        },
+        backgroundColor: isDark ? '#1a1e27' : '#ffffff',
+        borderColor: borderColor,
+        textStyle: {
+          color: isDark ? '#e8ecf1' : '#111827'
         },
         formatter: (params) => {
           let result = `第${params[0].axisValue}期<br/>`;
@@ -107,13 +131,15 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
       legend: {
         data: [t('calcLoanPrincipal'), t('calcLoanInterest'), t('calcLoanRemaining')],
         textStyle: {
-          color: 'var(--text)'
-        }
+          color: textColor
+        },
+        top: 0
       },
       grid: {
         left: '3%',
         right: '4%',
         bottom: '3%',
+        top: '15%',
         containLabel: true
       },
       xAxis: {
@@ -121,7 +147,7 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
         boundaryGap: false,
         data: sampledData.map(item => item.month),
         axisLabel: {
-          color: 'var(--text-muted)',
+          color: textColor,
           formatter: (value) => {
             const year = Math.floor((value - 1) / 12) + 1;
             return `第${year}年`;
@@ -129,24 +155,29 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
         },
         axisLine: {
           lineStyle: {
-            color: 'var(--border)'
+            color: borderColor
+          }
+        },
+        axisTick: {
+          lineStyle: {
+            color: borderColor
           }
         }
       },
       yAxis: {
         type: 'value',
         axisLabel: {
-          color: 'var(--text-muted)',
+          color: textColor,
           formatter: (value) => `¥${(value / 10000).toFixed(1)}万`
         },
         axisLine: {
           lineStyle: {
-            color: 'var(--border)'
+            color: borderColor
           }
         },
         splitLine: {
           lineStyle: {
-            color: 'var(--border)'
+            color: borderColor
           }
         }
       },
@@ -216,7 +247,7 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         <section>
           <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-            <i className="ph ph-sliders-horizontal" /> 贷款模式
+            <i className="ph ph-sliders-horizontal" /> {t('calcLoanTitle')}
           </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
             <button
@@ -427,6 +458,8 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
           <div style={{ height: '300px' }}>
             {scheduleData ? (
               <ReactECharts
+                key={themeKey}
+                ref={chartRef}
                 option={getChartOption()}
                 style={{ height: '100%', width: '100%' }}
               />
@@ -436,9 +469,9 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--text-muted)'
+                color: 'var(--text-2)'
               }}>
-                点击「{t('btnCalc')}」查看图表
+                {t('calcLoanChartPlaceholder').replace('{btnCalc}', t('btnCalc'))}
               </div>
             )}
           </div>
