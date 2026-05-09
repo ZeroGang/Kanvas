@@ -1,29 +1,68 @@
-# Kanvas 项目说明
+# Kanvas 个人财务管理
 
-面向黄金定投策略的参数配置、历史记录与可视化。**Web 面板**与 [CCDash](https://github.com/zihenghe04/CCDash) 同类技术栈（Python 标准库 `http.server` + `app/` 静态页：Inter 字体、Phosphor Icons、ApexCharts、Notyf、侧栏布局）。行情拉取依赖 **AkShare** 与 **pandas**。
+面向个人用户的财务管理工具，提供投资策略配置、财务分析、历史记录与可视化功能。**Web 面板**采用 Python 标准库 `http.server` 后端 + React 前端技术栈。前端使用 Inter 字体、Phosphor Icons、ApexCharts、Notyf，支持响应式设计。
+
+---
+
+## 项目特性
+
+- 🌐 **跨平台支持**：桌面端 + 移动端响应式布局
+- 📱 **移动端适配**：底部Tab导航，PWA支持，可添加到桌面
+- 🎨 **深色/浅色主题**：支持主题切换
+- 🌍 **多语言**：支持中文/英文切换
+- 📊 **财务分析**：多种计算工具和可视化图表
+- 💾 **本地存储**：数据本地持久化，安全便捷
+
+---
+
+## 移动端适配
+
+本项目已支持完整的移动端适配，支持：
+- **响应式布局**：自动适应桌面端、平板和手机端自动切换
+- **底部Tab导航**：移动端使用现代简洁的导航设计
+- **PWA支持**：可添加到桌面，获得类似原生应用的体验
+- **安全区域适配**：支持刘海屏、灵动岛等设备
+
+### 移动端特性
+- 桌面端：侧边栏导航
+- 移动端：顶部标题栏 + 底部Tab导航
 
 ---
 
 ## 目录结构
 
 ```
-Kanvas/                    # 本地目录名可仍为 Gold 等，不影响运行
+Kanvas/                    # 项目根目录
 
 ├── main.py                 # 根入口：默认 Web；--cli 为命令行
-├── server.py               # Web 后端；端口由系统分配（绑定 0）
+├── server.py               # Web 后端；固定端口 8100
 ├── app/                    # Web 前端
 │   ├── dist/               # 运行时持久化（勿通过静态 URL 暴露）
 │   │   ├── config/         # JSON：config.json、records.json、saved_backtests.json
 │   │   └── excels/        # 行情 CSV：spot_hist_*.csv
+│   ├── public/             # 静态资源（PWA支持）
+│   │   ├── manifest.json  # PWA配置
+│   │   ├── app.png       # 应用图标
+│   │   └── favicon.svg    # 网站图标
+│   ├── src/                # React 源代码
+│   │   ├── components/     # Comp 开头的可复用UI组件
+│   │   ├── wins/           # Win 开头的弹窗组件
+│   │   ├── pages/          # Win 开头的页面组件
+│   │   ├── hooks/          # 自定义 Hooks
+│   │   ├── lib/            # 工具库
+│   │   ├── App.jsx
+│   │   └── main.jsx
 │   ├── index.html
-│   ├── favicon.svg
-│   ├── js/                 # ES Module
-│   └── style.css
+│   ├── style.css
+│   ├── package.json
+│   └── vite.config.js      # Vite 配置（代理到后端 8100）
 ├── PROJECT.md
 ├── scripts/
+│   ├── api/                # API 处理器
+│   ├── core/               # calculator、market、backtest、backtest_store
+│   ├── services/           # 业务服务
 │   ├── paths.py            # project_root、dist_config_dir、dist_excels_dir
-│   ├── main.py             # 仅 --cli 命令行交互
-│   └── core/               # calculator、market、backtest、backtest_store
+│   └── main.py             # 仅 --cli 命令行交互
 └── requirements.txt        # pandas、akshare
 ```
 
@@ -45,15 +84,64 @@ Kanvas/                    # 本地目录名可仍为 Gold 等，不影响运行
 
 ## 入口与运行
 
-- `python server.py` 或 `python main.py`：启动 **Web**，控制台会打印本机地址（含端口）。
+- 先启动后端：`python server.py` 或 `python main.py`
+- 再启动前端（在 `app/` 目录）：`npm run dev`
+- 访问浏览器显示的地址即可使用
 - `python main.py --cli` 或 `python scripts/main.py --cli`：命令行交互（可选）。
 
 ---
 
 ## 依赖
 
+### 后端
 - **Python 标准库**（含 `http.server`）
 - **pandas**、**akshare**（见 `requirements.txt`）
+
+### 前端
+- **React 19**
+- **Vite**
+- **ApexCharts**（图表）
+- **Phosphor Icons**（图标）
+- **Notyf**（通知）
+
+---
+
+## 前端组件
+
+所有组件均以 `Win` 或 `Comp` 开头，遵循单一职责原则：
+
+### 页面组件（Win 开头）
+- `WinOverview`：账户（总资产、资产明细、计算工具）
+- `WinSpot`：市场行情
+- `WinHoldings`：持有管理
+- `WinStrategy`：策略配置
+- `WinBacktest`：回测
+
+### 导航顺序
+1. **行情** - 市场行情查看
+2. **持有** - 持有管理
+3. **策略** - 投资策略配置
+4. **回测** - 策略历史回测
+5. **账户** - 总资产与资产明细
+
+### 移动端页面
+移动端采用底部Tab导航，顺序同上。
+
+### 弹窗组件（Win 开头）
+- `WinModal`：通用弹窗容器
+- `WinTodayCalc`：定投计算器
+- `WinReturnCalc`：收益率计算器
+- `WinDrawdownCalc`：回撤率计算器
+- `WinCompoundCalc`：复利计算器（含图表）
+- `WinLoanCalc`：贷款计算器
+
+### 可复用UI组件（Comp 开头）
+- `CompInput`：输入框组件（支持标签、后缀等）
+- `CompButton`：按钮组件（支持图标、高亮样式）
+- `CompFormGrid`：表单网格布局
+- `CompResultBox`：结果展示容器
+- `CompResultRow`：结果行组件（支持高亮、颜色）
+- `CompIndex`：统一导出入口
 
 ---
 
@@ -64,3 +152,33 @@ Kanvas/                    # 本地目录名可仍为 Gold 等，不影响运行
 - **权益最大回撤**：按每日模拟权益序列计算。
 - **期末净投入**：累计买入 − 累计卖出回款。
 - **期末累计收益（元）**：期末权益 − 期末净投入。
+
+---
+
+## PWA 使用
+
+本项目支持PWA（渐进式Web应用），可以像原生应用一样添加到桌面使用。
+
+### 如何添加到桌面
+1. 在浏览器中打开应用
+2. 点击浏览器菜单或地址栏的"添加到主屏幕"或"安装应用"选项
+3. 确认添加后，桌面上会出现Kanvas图标
+
+### PWA特性
+- 桌面快捷方式
+- 全屏运行（无浏览器地址栏）
+- 应用图标和启动画面
+- 响应式设计
+
+---
+
+## 更新日志
+
+### 2026-05-09
+- ✅ 项目定位：个人财务管理工具
+- ✅ 添加完整移动端适配（响应式布局）
+- ✅ 实现移动端底部Tab导航
+- ✅ 添加PWA支持
+- ✅ 调整导航顺序：行情→持有→策略→回测→账户
+- ✅ "概览"页面改名为"账户"
+- ✅ 账户页面新增：总资产、资产明细

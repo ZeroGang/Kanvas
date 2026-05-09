@@ -31,7 +31,9 @@ SCRIPTS = ROOT / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-APP_DIR = (ROOT / "app").resolve()
+APP_BUILD_DIR = (ROOT / "app_build").resolve()
+APP_SRC_DIR = (ROOT / "app").resolve()
+APP_DIR = APP_BUILD_DIR if APP_BUILD_DIR.exists() else APP_SRC_DIR
 
 _FAVICON_SVG_BYTES = (
     b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">'
@@ -287,17 +289,13 @@ class KanvasHandler(SimpleHTTPRequestHandler):
 
 
 def main():
-    import random
-
     host = "127.0.0.1"
-    for port in random.sample(range(8100, 8500), 50):
-        try:
-            server = ThreadedHTTPServer((host, port), KanvasHandler)
-            break
-        except OSError:
-            continue
-    else:
-        print("无法找到可用端口", file=sys.stderr)
+    port = 8100
+
+    try:
+        server = ThreadedHTTPServer((host, port), KanvasHandler)
+    except OSError as e:
+        print(f"无法启动服务器: {e}", file=sys.stderr)
         sys.exit(1)
 
     print(f"\nKanvas Web 面板已启动: http://{host}:{port}/\n")
