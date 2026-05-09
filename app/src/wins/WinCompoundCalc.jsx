@@ -10,6 +10,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
   const [ciYears, setCiYears] = useState(10);
   const [ciResult, setCiResult] = useState(null);
   const [ciChartData, setCiChartData] = useState(null);
+  const [themeKey, setThemeKey] = useState(0);
 
   const calculateCompound = () => {
     const p = parseFloat(ciPrincipal) || 0;
@@ -58,17 +59,36 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
     }
   }, [isOpen]);
 
+  // Listen for theme changes
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setThemeKey(k => k + 1);
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    });
+    return () => observer.disconnect();
+  }, []);
+
   const getChartOption = () => {
     if (!ciChartData) return {};
     
+    const isDark = document.body.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#9ca3b0' : '#4b5563';
+    const borderColor = isDark ? 'rgba(148,163,184,0.07)' : 'rgba(15,23,42,0.07)';
+    
     return {
-      title: {
-        show: false
-      },
+      backgroundColor: 'transparent',
       tooltip: {
         trigger: 'axis',
+        backgroundColor: isDark ? '#1a1e27' : '#ffffff',
+        borderColor: borderColor,
+        textStyle: {
+          color: isDark ? '#e8ecf1' : '#111827'
+        },
         formatter: (params) => {
-          let result = `第${params[0].name}年<br/>`;
+          let result = `${t('calcCompoundYears').replace('{years}', params[0].name)}<br/>`;
           params.forEach(param => {
             result += `${param.marker} ${param.seriesName}: ¥${param.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}<br/>`;
           });
@@ -76,50 +96,56 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
         }
       },
       legend: {
-        data: ['总金额', '累计本金'],
+        data: [t('calcCompoundChartTotal'), t('calcCompoundChartInvested')],
         textStyle: {
-          color: 'var(--text)'
+          color: textColor
         }
       },
       grid: {
         left: '3%',
         right: '4%',
         bottom: '3%',
+        top: '10%',
         containLabel: true
       },
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: ciChartData.years.map(y => `${y}年`),
+        data: ciChartData.years.map(y => `${y}`),
         axisLabel: {
-          color: 'var(--text-muted)'
+          color: textColor
         },
         axisLine: {
           lineStyle: {
-            color: 'var(--border)'
+            color: borderColor
+          }
+        },
+        axisTick: {
+          lineStyle: {
+            color: borderColor
           }
         }
       },
       yAxis: {
         type: 'value',
         axisLabel: {
-          color: 'var(--text-muted)',
+          color: textColor,
           formatter: (val) => `¥${(val / 10000).toFixed(0)}万`
         },
         axisLine: {
           lineStyle: {
-            color: 'var(--border)'
+            color: borderColor
           }
         },
         splitLine: {
           lineStyle: {
-            color: 'var(--border)'
+            color: borderColor
           }
         }
       },
       series: [
         {
-          name: '总金额',
+          name: t('calcCompoundChartTotal'),
           type: 'line',
           smooth: true,
           data: ciChartData.total,
@@ -141,7 +167,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
           }
         },
         {
-          name: '累计本金',
+          name: t('calcCompoundChartInvested'),
           type: 'line',
           smooth: true,
           data: ciChartData.invested,
@@ -169,14 +195,11 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <WinModal title={t('calcCompoundToolBtn')} onClose={onClose} size="large">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+    <WinModal title={t('calcCompoundTitle')} onClose={onClose} size="large">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <section>
-          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-            <i className="ph ph-sliders-horizontal" /> 策略配置
-          </div>
           <div className="filter-group">
-            <label><i className="ph ph-piggy-bank" /> 初始本金</label>
+            <label><i className="ph ph-piggy-bank" /> {t('calcCompoundPrincipal')}</label>
             <div className="calc-ci-input-wrap">
               <input
                 type="number"
@@ -190,7 +213,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
             </div>
           </div>
           <div className="filter-group">
-            <label><i className="ph ph-hand-coins" /> 每月追加定投</label>
+            <label><i className="ph ph-hand-coins" /> {t('calcCompoundMonthly')}</label>
             <div className="calc-ci-input-wrap">
               <input
                 type="number"
@@ -204,7 +227,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
             </div>
           </div>
           <div className="filter-group">
-            <label><i className="ph ph-percent" /> 预期年化收益率</label>
+            <label><i className="ph ph-percent" /> {t('calcCompoundRate')}</label>
             <div className="calc-ci-input-wrap">
               <input
                 type="number"
@@ -217,18 +240,18 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
             </div>
           </div>
           <div className="filter-group">
-            <label><i className="ph ph-repeat" /> 复利方式</label>
+            <label><i className="ph ph-repeat" /> {t('calcCompoundMode')}</label>
             <div role="radiogroup">
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginRight: '16px' }}>
-                <input type="radio" name="calcCiMode" value="monthly" checked={ciMode === 'monthly'} onChange={() => setCiMode('monthly')} /> 按月复利
+                <input type="radio" name="calcCiMode" value="monthly" checked={ciMode === 'monthly'} onChange={() => setCiMode('monthly')} /> {t('calcCompoundMonthlyMode')}
               </label>
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                <input type="radio" name="calcCiMode" value="yearly" checked={ciMode === 'yearly'} onChange={() => setCiMode('yearly')} /> 按年复利
+                <input type="radio" name="calcCiMode" value="yearly" checked={ciMode === 'yearly'} onChange={() => setCiMode('yearly')} /> {t('calcCompoundYearlyMode')}
               </label>
             </div>
           </div>
           <div className="filter-group">
-            <label><i className="ph ph-calendar" /> 投资时长: <b>{ciYears} 年</b></label>
+            <label><i className="ph ph-calendar" /> {t('calcCompoundYears')}: <b>{t('calcCompoundYearsLabel').replace('{years}', ciYears)}</b></label>
             <input
               type="range"
               value={ciYears}
@@ -239,31 +262,32 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
             />
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-              <i className="ph ph-clock-counter-clockwise" /> 参考历史指数
+            <div style={{ fontSize: '14px', color: 'var(--text-2)', marginBottom: '8px' }}>
+              <i className="ph ph-clock-counter-clockwise" /> {t('calcCompoundHistoryRef')}
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button type="button" className="btn" onClick={() => setCiRatePct(10)}><i className="ph ph-chart-line-up" /> 标普500 (10%)</button>
-              <button type="button" className="btn" onClick={() => setCiRatePct(15)}><i className="ph ph-rocket-launch" /> 纳指100 (15%)</button>
-              <button type="button" className="btn" onClick={() => setCiRatePct(3.5)}><i className="ph ph-shield-check" /> 稳健理财 (3.5%)</button>
+              <button type="button" className="btn" onClick={() => setCiRatePct(10)}><i className="ph ph-chart-line-up" /> {t('calcCompoundSnp500')}</button>
+              <button type="button" className="btn" onClick={() => setCiRatePct(15)}><i className="ph ph-rocket-launch" /> {t('calcCompoundNasdaq100')}</button>
+              <button type="button" className="btn" onClick={() => setCiRatePct(3.5)}><i className="ph ph-shield-check" /> {t('calcCompoundStable')}</button>
             </div>
           </div>
           <div>
             <button type="button" className="btn btn-accent" onClick={calculateCompound}>
-              <i className="ph ph-calculator" /> 立即计算
+              <i className="ph ph-calculator" /> {t('calcCompoundCalculate')}
             </button>
           </div>
         </section>
         <section>
-          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', padding: '20px', background: 'var(--card-bg)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ color: 'var(--text-muted)', marginBottom: '8px' }}><i className="ph ph-flag-checkered" /> 到期预估总资产</div>
+          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', padding: '20px', background: 'var(--bg-2)', borderRadius: '12px', textAlign: 'center' }}>
+            <div style={{ color: 'var(--text-2)', marginBottom: '8px' }}><i className="ph ph-flag-checkered" /> {t('calcCompoundTotalAssets')}</div>
             <div style={{ fontSize: '32px', fontWeight: '700' }}>
               {ciResult ? `¥${ciResult.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}
             </div>
           </div>
-          <div style={{ height: '220px', marginBottom: '16px' }}>
+          <div style={{ height: '250px', marginBottom: '16px' }}>
             {ciChartData ? (
               <ReactECharts
+                key={themeKey}
                 option={getChartOption()}
                 style={{ height: '100%', width: '100%' }}
               />
@@ -273,31 +297,28 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
-                color: 'var(--text-muted)' 
+                color: 'var(--text-2)' 
               }}>
-                点击"立即计算"查看图表
+                {t('calcCompoundChartPlaceholder').replace('{btnCalc}', t('calcCompoundCalculate'))}
               </div>
             )}
           </div>
           {ciResult && (
-            <div style={{ background: 'var(--card-bg)', padding: '16px', borderRadius: '8px' }}>
+            <div style={{ background: 'var(--bg-2)', padding: '16px', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
-                <span><i className="ph ph-wallet" /> 累计投入本金</span>
+                <span><i className="ph ph-wallet" /> {t('calcCompoundTotalInvested')}</span>
                 <b>¥{ciResult.invested.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
-                <span><i className="ph ph-coins" /> 累计复利收益</span>
-                <b style={{ color: '#22c55e' }}>¥{ciResult.profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b>
+                <span><i className="ph ph-coins" /> {t('calcCompoundProfit')}</span>
+                <b style={{ color: ciResult.profit >= 0 ? '#22c55e' : '#ef4444' }}>¥{ciResult.profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span><i className="ph ph-trend-up" /> 复利收益率</span>
-                <b>{ciResult.totalRet.toFixed(2)}%</b>
+                <span><i className="ph ph-trending-up" /> {t('calcCompoundTotalReturn')}</span>
+                <b style={{ color: ciResult.totalRet >= 0 ? '#22c55e' : '#ef4444' }}>{ciResult.totalRet.toFixed(2)}%</b>
               </div>
             </div>
           )}
-          <div style={{ marginTop: '16px', fontSize: '14px', color: 'var(--text-muted)' }}>
-            <i className="ph ph-info" /> 计算基于月度复利，历史表现不代表未来收益。
-          </div>
         </section>
       </div>
     </WinModal>
