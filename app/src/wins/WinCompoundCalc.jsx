@@ -198,45 +198,47 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
     <WinModal title={t('calcCompoundTitle')} onClose={onClose} size="large">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <section>
-          <div className="filter-group">
-            <label><i className="ph ph-piggy-bank" /> {t('calcCompoundPrincipal')}</label>
-            <div className="calc-ci-input-wrap">
-              <input
-                type="number"
-                className="filter-input"
-                value={ciPrincipal}
-                onChange={e => setCiPrincipal(e.target.value)}
-                min="0"
-                step="any"
-              />
-              <span>￥</span>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+            <div className="filter-group" style={{ flex: 1 }}>
+              <label><i className="ph ph-piggy-bank" /> {t('calcCompoundPrincipal')}</label>
+              <div className="calc-ci-input-wrap">
+                <input
+                  type="number"
+                  className="filter-input"
+                  value={ciPrincipal}
+                  onChange={e => setCiPrincipal(e.target.value)}
+                  min="0"
+                  step="any"
+                />
+                <span>￥</span>
+              </div>
             </div>
-          </div>
-          <div className="filter-group">
-            <label><i className="ph ph-hand-coins" /> {t('calcCompoundMonthly')}</label>
-            <div className="calc-ci-input-wrap">
-              <input
-                type="number"
-                className="filter-input"
-                value={ciMonthly}
-                onChange={e => setCiMonthly(e.target.value)}
-                min="0"
-                step="any"
-              />
-              <span>￥</span>
+            <div className="filter-group" style={{ flex: 1 }}>
+              <label><i className="ph ph-hand-coins" /> {t('calcCompoundMonthly')}</label>
+              <div className="calc-ci-input-wrap">
+                <input
+                  type="number"
+                  className="filter-input"
+                  value={ciMonthly}
+                  onChange={e => setCiMonthly(e.target.value)}
+                  min="0"
+                  step="any"
+                />
+                <span>￥</span>
+              </div>
             </div>
-          </div>
-          <div className="filter-group">
-            <label><i className="ph ph-percent" /> {t('calcCompoundRate')}</label>
-            <div className="calc-ci-input-wrap">
-              <input
-                type="number"
-                className="filter-input"
-                value={ciRatePct}
-                onChange={e => setCiRatePct(e.target.value)}
-                step="any"
-              />
-              <span>%</span>
+            <div className="filter-group" style={{ flex: 1 }}>
+              <label><i className="ph ph-percent" /> {t('calcCompoundRate')}</label>
+              <div className="calc-ci-input-wrap">
+                <input
+                  type="number"
+                  className="filter-input"
+                  value={ciRatePct}
+                  onChange={e => setCiRatePct(e.target.value)}
+                  step="any"
+                />
+                <span>%</span>
+              </div>
             </div>
           </div>
           <div className="filter-group">
