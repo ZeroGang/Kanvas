@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
 import { readPage, writePage } from '../lib/storage.js';
 
-const VALID_PAGES = new Set(['overview', 'spot', 'holdings', 'strategy', 'backtest']);
+const VALID_PAGES = new Set(['account', 'spot', 'holdings', 'strategy', 'backtest']);
 const LEGACY_PAGE_MAP = {
-  calc: 'overview',
+  calc: 'account',
+  overview: 'account',
   settings: 'strategy',
   saved: 'strategy',
   records: 'strategy',
 };
 
 function normalizePage(value) {
-  const raw = String(value || '').replace(/^#?\/?/, '') || readPage('overview');
+  const raw = String(value || '').replace(/^#?\/?/, '') || readPage('account');
   const mapped = LEGACY_PAGE_MAP[raw] || raw;
-  return VALID_PAGES.has(mapped) ? mapped : 'overview';
+  return VALID_PAGES.has(mapped) ? mapped : 'account';
 }
 
 function readHashPage() {
-  return normalizePage(window.location.hash || readPage('overview'));
+  return normalizePage(window.location.hash || readPage('account'));
 }
 
 export function useHashPage() {

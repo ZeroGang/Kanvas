@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 Kanvas 命令行入口（可选）。
-Web 面板请运行项目根目录: python server.py
+Web 面板请运行项目根目录: python main.py
 
 项目结构:
-    - scripts/core/   计算与行情
-    - scripts/main.py 本文件（仅 --cli）
+    - server/core/   计算与行情
+    - server/cli.py 本文件（仅 --cli）
     - app/dist/config/  JSON（config、records、saved_backtests、holdings）
     - app/dist/excels/  行情 CSV（spot_hist_*.csv）
 """
@@ -91,11 +91,11 @@ def run_cli():
 def main():
     args = sys.argv[1:]
     if args and args[0] in ("-h", "--help"):
-        print("Web 面板: python server.py")
-        print("命令行:    python main.py --cli  或  python scripts/main.py --cli")
+        print("Web 面板: python main.py")
+        print("命令行:    python main.py --cli  或  python server/cli.py --cli")
         return
     if args and args[0] != "--cli":
-        print("未知参数。Web: python server.py  CLI: python scripts/main.py --cli", file=sys.stderr)
+        print("未知参数。Web: python main.py  CLI: python server/cli.py --cli", file=sys.stderr)
         sys.exit(1)
     run_cli()
 

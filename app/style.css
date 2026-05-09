@@ -837,15 +837,9 @@ tr:nth-child(even) td { background:var(--stripe); }
 .mobile-header-content {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   max-width: 600px;
   margin: 0 auto;
-}
-
-.mobile-header-title {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
 }
 
 .mobile-header-actions {

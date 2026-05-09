@@ -1,6 +1,35 @@
 export function WinSpot({ t }) {
   return (
     <>
+      <div className="stat-cards" style={{ marginBottom: '16px' }}>
+        <div className="stat-card card">
+          <div className="stat-header">
+            <div className="stat-icon si-a"><i className="ph ph-currency-circle-dollar" /></div>
+            <button type="button" className="stat-refresh-btn" title={t('ovRefreshPrice')} aria-label={t('ovRefreshPrice')}>
+              <i className="ph ph-arrows-clockwise" />
+            </button>
+          </div>
+          <div className="stat-value">—</div>
+          <div className="stat-value-asof" />
+          <div className="stat-label stat-label--with-suffix"><span>{t('ovLastPrice')}</span></div>
+        </div>
+        <div className="stat-card card">
+          <div className="stat-header"><div className="stat-icon si-b"><i className="ph ph-chart-bar" /></div></div>
+          <div className="stat-value">—</div>
+          <div className="stat-label">{t('maPeriod')}</div>
+        </div>
+        <div className="stat-card card">
+          <div className="stat-header"><div className="stat-icon si-g"><i className="ph ph-database" /></div></div>
+          <div className="stat-value">—</div>
+          <div className="stat-label">{t('spotBars')}</div>
+        </div>
+        <div className="stat-card card">
+          <div className="stat-header"><div className="stat-icon si-p"><i className="ph ph-tag" /></div></div>
+          <div className="stat-value stat-value--spot-name">—</div>
+          <div className="stat-label">{t('spotActiveName')}</div>
+        </div>
+      </div>
+
       <div className="card sec">
         <div className="sec-header">
           <div>

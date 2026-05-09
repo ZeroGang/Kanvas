@@ -9,7 +9,6 @@ Kanvas Web 面板：Python 标准库 HTTP + ./app 静态资源。
   - 服务层：业务逻辑封装（services/）
   - 核心层：计算、行情、存储（core/）
 """
-
 from __future__ import annotations
 
 import io
@@ -26,10 +25,8 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from socketserver import ThreadingMixIn
 
-ROOT = Path(__file__).resolve().parent
-SCRIPTS = ROOT / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
+ROOT = Path(__file__).resolve().parent.parent
+SERVER_ROOT = Path(__file__).resolve().parent
 
 APP_BUILD_DIR = (ROOT / "app_build").resolve()
 APP_SRC_DIR = (ROOT / "app").resolve()
@@ -56,9 +53,9 @@ class KanvasHandler(SimpleHTTPRequestHandler):
         if name == "_api_handlers":
             import sys
             from pathlib import Path
-            scripts_path = Path(__file__).parent / "scripts"
-            if str(scripts_path) not in sys.path:
-                sys.path.insert(0, str(scripts_path))
+            server_path = Path(__file__).parent
+            if str(server_path) not in sys.path:
+                sys.path.insert(0, str(server_path))
             from api.handlers import APIHandlers
 
             self._api_handlers = APIHandlers()

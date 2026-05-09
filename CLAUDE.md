@@ -1,6 +1,6 @@
 # Kanvas 个人财务管理
 
-面向个人用户的财务管理工具，提供投资策略配置、财务分析、历史记录与可视化功能。**Web 面板**采用 Python 标准库 `http.server` 后端 + React 前端技术栈。前端使用 Inter 字体、Phosphor Icons、ApexCharts、Notyf，支持响应式设计。
+面向个人用户的财务管理工具，提供投资策略配置、财务分析、历史记录与可视化功能。**Web 面板**采用 Python 标准库 `http.server` 后端 + React 前端技术栈。前端使用 Inter 字体、Phosphor Icons、ECharts、Notyf，支持响应式设计。
 
 ---
 
@@ -35,7 +35,14 @@
 Kanvas/                    # 项目根目录
 
 ├── main.py                 # 根入口：默认 Web；--cli 为命令行
-├── server.py               # Web 后端；固定端口 8100
+├── server/                 # 后端包（所有后端代码）
+│   ├── __init__.py
+│   ├── web.py             # Web 后端；固定端口 8100
+│   ├── cli.py             # 命令行交互入口
+│   ├── api/               # API 处理器
+│   ├── core/              # calculator、market、backtest、backtest_store
+│   ├── services/          # 业务服务
+│   └── paths.py           # project_root、dist_config_dir、dist_excels_dir
 ├── app/                    # Web 前端
 │   ├── dist/               # 运行时持久化（勿通过静态 URL 暴露）
 │   │   ├── config/         # JSON：config.json、records.json、saved_backtests.json
@@ -56,38 +63,48 @@ Kanvas/                    # 项目根目录
 │   ├── style.css
 │   ├── package.json
 │   └── vite.config.js      # Vite 配置（代理到后端 8100）
-├── PROJECT.md
-├── scripts/
-│   ├── api/                # API 处理器
-│   ├── core/               # calculator、market、backtest、backtest_store
-│   ├── services/           # 业务服务
-│   ├── paths.py            # project_root、dist_config_dir、dist_excels_dir
-│   └── main.py             # 仅 --cli 命令行交互
+├── CLAUDE.md              # 项目文档
+├── CHANGELOG.md           # 更新日志
 └── requirements.txt        # pandas、akshare
 ```
 
 ---
 
-## 持久化（`app/dist/config/` 与 `app/dist/excels/`）
+## 数据存储架构
+
+### 后端存储（`app/dist/config/` 与 `app/dist/excels/`）
+所有业务数据完全由后端管理：
 
 | 路径 | 说明 |
 |------|------|
 | `app/dist/config/config.json` | 策略参数 |
 | `app/dist/config/records.json` | 历史测算记录 |
 | `app/dist/config/saved_backtests.json` | 已存回测方案 |
+| `app/dist/config/holdings.json` | 持仓数据 |
 | `app/dist/excels/spot_hist_*.csv` | 现货行情缓存 |
 | `app/dist/excels/spot_instruments_akshare.csv` | AkShare 上金所品种表（`spot_symbol_table_sge`）+ XAU，列 id/label_zh/label_en/unit_zh/unit_en |
 
 `dist_config_dir()` / `dist_excels_dir()` 会创建子目录。若 `app/dist` 根下仍有旧版平铺的 json/csv，启动时会自动迁入对应子目录（不覆盖已有文件）。Web 服务对路径 `/dist/*` 返回 403。
 
+### 前端存储（localStorage）
+前端仅存储 UI 偏好数据：
+
+| Key | 说明 |
+|-----|------|
+| `kanvas_app_lang` | 语言偏好（zh/en） |
+| `kanvas_app_theme` | 主题偏好（dark/light） |
+| `kanvas_app_page` | 最后访问的页面 |
+
+前端通过 REST API 与后端交互业务数据，不直接操作后端 JSON 文件。
+
 ---
 
 ## 入口与运行
 
-- 先启动后端：`python server.py` 或 `python main.py`
-- 再启动前端（在 `app/` 目录）：`npm run dev`
+- 先启动后端：`python main.py`
+- 再启动前端（在 `app/` 目录）：`npm install && npm run dev`
 - 访问浏览器显示的地址即可使用
-- `python main.py --cli` 或 `python scripts/main.py --cli`：命令行交互（可选）。
+- `python main.py --cli` 或 `python server/cli.py --cli`：命令行交互（可选）。
 
 ---
 
@@ -100,9 +117,30 @@ Kanvas/                    # 项目根目录
 ### 前端
 - **React 19**
 - **Vite**
-- **ApexCharts**（图表）
+- **ECharts**（图表）
+- **echarts-for-react**（React 组件）
 - **Phosphor Icons**（图标）
 - **Notyf**（通知）
+
+---
+
+## 开发规范
+
+### 1. 组件规范
+- 所有可复用的组件都必须有自己的独立文件和类/函数定义
+- 组件命名遵循 `Win`（页面/弹窗）或 `Comp`（可复用UI）前缀规范
+- 单一职责原则：每个组件只负责一个功能领域
+
+### 2. 文本国际化（i18n）
+- **所有固定文本必须通过 i18n 系统管理**，禁止直接在 JSX 中硬编码文本
+- 使用 `t('key')` 函数引用翻译文本
+- 翻译键值定义在 `src/lib/i18n-data.js` 中
+- 支持中文（zh）和英文（en）双语
+
+### 3. 样式规范
+- 使用 CSS 变量定义主题色和间距
+- 支持深色/浅色主题切换
+- 移动端优先的响应式设计
 
 ---
 
@@ -111,15 +149,15 @@ Kanvas/                    # 项目根目录
 所有组件均以 `Win` 或 `Comp` 开头，遵循单一职责原则：
 
 ### 页面组件（Win 开头）
-- `WinOverview`：账户（总资产、资产明细、计算工具）
+- `WinAccount`：账户（总资产、资产明细）
 - `WinSpot`：市场行情
-- `WinHoldings`：持有管理
+- `WinHoldings`：工具（各类财务计算工具）
 - `WinStrategy`：策略配置
 - `WinBacktest`：回测
 
 ### 导航顺序
 1. **行情** - 市场行情查看
-2. **持有** - 持有管理
+2. **工具** - 各类财务计算工具
 3. **策略** - 投资策略配置
 4. **回测** - 策略历史回测
 5. **账户** - 总资产与资产明细
@@ -174,11 +212,4 @@ Kanvas/                    # 项目根目录
 
 ## 更新日志
 
-### 2026-05-09
-- ✅ 项目定位：个人财务管理工具
-- ✅ 添加完整移动端适配（响应式布局）
-- ✅ 实现移动端底部Tab导航
-- ✅ 添加PWA支持
-- ✅ 调整导航顺序：行情→持有→策略→回测→账户
-- ✅ "概览"页面改名为"账户"
-- ✅ 账户页面新增：总资产、资产明细
+详细的更新记录请查看 [CHANGELOG.md](./CHANGELOG.md)。

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useHashPage } from './hooks/useHashPage.js';
 import { useI18n } from './hooks/useI18n.js';
 import { useTheme } from './hooks/useTheme.js';
-import { WinOverview } from './pages/WinOverview.jsx';
+import { WinAccount } from './pages/WinAccount.jsx';
 import { WinSpot } from './pages/WinSpot.jsx';
 import { WinHoldings } from './pages/WinHoldings.jsx';
 import { WinStrategy } from './pages/WinStrategy.jsx';
@@ -45,10 +45,10 @@ export default function App() {
 
   const navItems = [
     { id: 'spot', icon: 'chart-line', label: t('navSpot') },
-    { id: 'holdings', icon: 'wallet', label: t('navHoldings') },
+    { id: 'holdings', icon: 'calculator', label: t('navHoldings') },
     { id: 'strategy', icon: 'sliders', label: t('navStrategy') },
     { id: 'backtest', icon: 'chart-line-up', label: t('navBacktest') },
-    { id: 'overview', icon: 'squares-four', label: t('navOverview') },
+    { id: 'account', icon: 'squares-four', label: t('navOverview') },
   ];
 
   const getPageTitle = () => {
@@ -58,8 +58,8 @@ export default function App() {
 
   function renderPage() {
     switch (page) {
-      case 'overview':
-        return <WinOverview t={t} />;
+      case 'account':
+        return <WinAccount t={t} />;
       case 'spot':
         return <WinSpot t={t} />;
       case 'holdings':
@@ -69,7 +69,7 @@ export default function App() {
       case 'backtest':
         return <WinBacktest t={t} />;
       default:
-        return <WinOverview t={t} />;
+        return <WinAccount t={t} />;
     }
   }
 
@@ -124,7 +124,6 @@ export default function App() {
         {isMobile && (
           <header className="mobile-header">
             <div className="mobile-header-content">
-              <div className="mobile-header-title">{getPageTitle()}</div>
               <div className="mobile-header-actions">
                 <button type="button" className="mobile-header-btn" onClick={toggleLang} title="Language">
                   <i className="ph ph-translate"></i>

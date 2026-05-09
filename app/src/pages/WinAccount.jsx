@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function WinOverview({ t }) {
+export function WinAccount({ t }) {
   return (
     <>
       <div className="card sec" style={{ marginBottom: '16px' }}>
@@ -24,7 +24,7 @@ export function WinOverview({ t }) {
               <i className="ph ph-credit-card"></i>
             </div>
             <div>
-              <div style={{ fontWeight: 600 }}>支付宝</div>
+              <div style={{ fontWeight: 600 }}>{t('assetAlipay')}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>¥ 0.00</div>
             </div>
           </div>
@@ -33,7 +33,7 @@ export function WinOverview({ t }) {
               <i className="ph ph-chat-circle-text"></i>
             </div>
             <div>
-              <div style={{ fontWeight: 600 }}>微信</div>
+              <div style={{ fontWeight: 600 }}>{t('assetWechat')}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>¥ 0.00</div>
             </div>
           </div>
@@ -42,7 +42,7 @@ export function WinOverview({ t }) {
               <i className="ph ph-bag"></i>
             </div>
             <div>
-              <div style={{ fontWeight: 600 }}>京东</div>
+              <div style={{ fontWeight: 600 }}>{t('assetJd')}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>¥ 0.00</div>
             </div>
           </div>
@@ -51,7 +51,7 @@ export function WinOverview({ t }) {
               <i className="ph ph-bank"></i>
             </div>
             <div>
-              <div style={{ fontWeight: 600 }}>银行</div>
+              <div style={{ fontWeight: 600 }}>{t('assetBank')}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>¥ 0.00</div>
             </div>
           </div>
