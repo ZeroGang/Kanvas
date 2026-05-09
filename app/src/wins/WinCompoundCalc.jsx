@@ -198,8 +198,8 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
     <WinModal title={t('calcCompoundTitle')} onClose={onClose} size="large">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <section>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-            <div className="filter-group" style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', justifyContent: 'center' }}>
+            <div className="filter-group" style={{ width: '180px', minWidth: 0 }}>
               <label><i className="ph ph-piggy-bank" /> {t('calcCompoundPrincipal')}</label>
               <div className="calc-ci-input-wrap">
                 <input
@@ -213,7 +213,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
                 <span>￥</span>
               </div>
             </div>
-            <div className="filter-group" style={{ flex: 1, minWidth: 0 }}>
+            <div className="filter-group" style={{ width: '180px', minWidth: 0 }}>
               <label><i className="ph ph-hand-coins" /> {t('calcCompoundMonthly')}</label>
               <div className="calc-ci-input-wrap">
                 <input
@@ -227,7 +227,7 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
                 <span>￥</span>
               </div>
             </div>
-            <div className="filter-group" style={{ flex: 1, minWidth: 0 }}>
+            <div className="filter-group" style={{ width: '180px', minWidth: 0 }}>
               <label><i className="ph ph-percent" /> {t('calcCompoundRate')}</label>
               <div className="calc-ci-input-wrap">
                 <input
