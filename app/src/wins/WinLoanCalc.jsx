@@ -246,9 +246,6 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
     <WinModal title={t('calcLoanTitle')} onClose={onClose} size="large">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <section>
-          <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-            <i className="ph ph-sliders-horizontal" /> {t('calcLoanTitle')}
-          </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
             <button
               type="button"
