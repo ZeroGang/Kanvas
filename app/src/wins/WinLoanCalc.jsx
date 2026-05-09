@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ReactECharts from 'echarts-for-react';
 import WinModal from './WinModal';
 
-export default function WinLoanCalc({ isOpen, onClose }) {
+export default function WinLoanCalc({ t, isOpen, onClose }) {
   const [loanMode, setLoanMode] = useState('commercial');
   const [loanAmount, setLoanAmount] = useState(33);
   const [loanCommercialAmount, setLoanCommercialAmount] = useState(70);
@@ -11,6 +12,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
   const [loanYears, setLoanYears] = useState(10);
   const [loanRepayType, setLoanRepayType] = useState('equal_payment');
   const [loanResult, setLoanResult] = useState(null);
+  const [scheduleData, setScheduleData] = useState(null);
 
   const calculateLoan = () => {
     let totalAmount, rate;
@@ -30,12 +32,27 @@ export default function WinLoanCalc({ isOpen, onClose }) {
     }
     const months = parseInt(loanYears) * 12;
     let monthlyPayment, totalInterest, totalPayment;
+    const schedule = [];
 
     if (loanRepayType === 'equal_payment') {
       const factor = Math.pow(1 + rate, months);
       monthlyPayment = (totalAmount * rate * factor) / (factor - 1);
       totalPayment = monthlyPayment * months;
       totalInterest = totalPayment - totalAmount;
+
+      let remaining = totalAmount;
+      for (let i = 0; i < months; i++) {
+        const interest = remaining * rate;
+        const principal = monthlyPayment - interest;
+        remaining -= principal;
+        schedule.push({
+          month: i + 1,
+          payment: monthlyPayment,
+          principal: principal,
+          interest: interest,
+          remaining: Math.max(0, remaining)
+        });
+      }
     } else {
       const principalPerMonth = totalAmount / months;
       let interestSum = 0;
@@ -43,7 +60,15 @@ export default function WinLoanCalc({ isOpen, onClose }) {
       for (let i = 0; i < months; i++) {
         const interest = remaining * rate;
         interestSum += interest;
+        const payment = principalPerMonth + interest;
         remaining -= principalPerMonth;
+        schedule.push({
+          month: i + 1,
+          payment: payment,
+          principal: principalPerMonth,
+          interest: interest,
+          remaining: Math.max(0, remaining)
+        });
       }
       totalInterest = interestSum;
       totalPayment = totalAmount + totalInterest;
@@ -56,12 +81,138 @@ export default function WinLoanCalc({ isOpen, onClose }) {
       totalPayment,
       totalInterest,
     });
+    setScheduleData(schedule);
+  };
+
+  const getChartOption = () => {
+    if (!scheduleData) return {};
+
+    const sampleInterval = Math.max(1, Math.floor(scheduleData.length / 36));
+    const sampledData = scheduleData.filter((_, i) => i % sampleInterval === 0);
+
+    return {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'cross'
+        },
+        formatter: (params) => {
+          let result = `第${params[0].axisValue}期<br/>`;
+          params.forEach(param => {
+            result += `${param.marker} ${param.seriesName}: ¥${param.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}<br/>`;
+          });
+          return result;
+        }
+      },
+      legend: {
+        data: [t('calcLoanPrincipal'), t('calcLoanInterest'), t('calcLoanRemaining')],
+        textStyle: {
+          color: 'var(--text)'
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: sampledData.map(item => item.month),
+        axisLabel: {
+          color: 'var(--text-muted)',
+          formatter: (value) => {
+            const year = Math.floor((value - 1) / 12) + 1;
+            return `第${year}年`;
+          }
+        },
+        axisLine: {
+          lineStyle: {
+            color: 'var(--border)'
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: 'var(--text-muted)',
+          formatter: (value) => `¥${(value / 10000).toFixed(1)}万`
+        },
+        axisLine: {
+          lineStyle: {
+            color: 'var(--border)'
+          }
+        },
+        splitLine: {
+          lineStyle: {
+            color: 'var(--border)'
+          }
+        }
+      },
+      series: [
+        {
+          name: t('calcLoanPrincipal'),
+          type: 'line',
+          smooth: true,
+          data: sampledData.map(item => item.principal),
+          itemStyle: {
+            color: '#3b82f6'
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(59, 130, 246, 0.5)' },
+                { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
+              ]
+            }
+          }
+        },
+        {
+          name: t('calcLoanInterest'),
+          type: 'line',
+          smooth: true,
+          data: sampledData.map(item => item.interest),
+          itemStyle: {
+            color: '#ef4444'
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(239, 68, 68, 0.5)' },
+                { offset: 1, color: 'rgba(239, 68, 68, 0.1)' }
+              ]
+            }
+          }
+        },
+        {
+          name: t('calcLoanRemaining'),
+          type: 'line',
+          smooth: true,
+          data: sampledData.map(item => item.remaining),
+          itemStyle: {
+            color: '#22c55e'
+          },
+          yAxisIndex: 0
+        }
+      ]
+    };
   };
 
   if (!isOpen) return null;
 
   return (
-    <WinModal title="贷款计算器" onClose={onClose} size="large">
+    <WinModal title={t('calcLoanTitle')} onClose={onClose} size="large">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         <section>
           <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
@@ -73,28 +224,28 @@ export default function WinLoanCalc({ isOpen, onClose }) {
               className={`btn ${loanMode === 'commercial' ? 'btn-accent' : ''}`}
               onClick={() => setLoanMode('commercial')}
             >
-              商业贷款
+              {t('calcLoanCommercial')}
             </button>
             <button
               type="button"
               className={`btn ${loanMode === 'fund' ? 'btn-accent' : ''}`}
               onClick={() => setLoanMode('fund')}
             >
-              公积金贷款
+              {t('calcLoanFund')}
             </button>
             <button
               type="button"
               className={`btn ${loanMode === 'combo' ? 'btn-accent' : ''}`}
               onClick={() => setLoanMode('combo')}
             >
-              组合贷款
+              {t('calcLoanCombo')}
             </button>
           </div>
 
           {loanMode === 'commercial' && (
             <div className="kanvas-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="filter-group">
-                <label><i className="ph ph-house" /> 贷款金额（万元）</label>
+                <label><i className="ph ph-house" /> {t('calcLoanAmount')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -108,7 +259,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
                 </div>
               </div>
               <div className="filter-group">
-                <label><i className="ph ph-percent" /> 年利率（%）</label>
+                <label><i className="ph ph-percent" /> {t('calcLoanRate')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -127,7 +278,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
           {loanMode === 'fund' && (
             <div className="kanvas-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="filter-group">
-                <label><i className="ph ph-bank" /> 贷款金额（万元）</label>
+                <label><i className="ph ph-bank" /> {t('calcLoanAmount')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -141,7 +292,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
                 </div>
               </div>
               <div className="filter-group">
-                <label><i className="ph ph-percent" /> 年利率（%）</label>
+                <label><i className="ph ph-percent" /> {t('calcLoanRate')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -160,7 +311,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
           {loanMode === 'combo' && (
             <div className="kanvas-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="filter-group">
-                <label><i className="ph ph-building-office" /> 商业贷款金额（万元）</label>
+                <label><i className="ph ph-building-office" /> {t('calcLoanCommercialAmount')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -174,7 +325,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
                 </div>
               </div>
               <div className="filter-group">
-                <label><i className="ph ph-percent" /> 商业贷款年利率（%）</label>
+                <label><i className="ph ph-percent" /> {t('calcLoanCommercialRate')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -188,7 +339,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
                 </div>
               </div>
               <div className="filter-group">
-                <label><i className="ph ph-bank" /> 公积金贷款金额（万元）</label>
+                <label><i className="ph ph-bank" /> {t('calcLoanFundAmount')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -202,7 +353,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
                 </div>
               </div>
               <div className="filter-group">
-                <label><i className="ph ph-percent" /> 公积金贷款年利率（%）</label>
+                <label><i className="ph ph-percent" /> {t('calcLoanFundRate')}</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="number"
@@ -220,7 +371,7 @@ export default function WinLoanCalc({ isOpen, onClose }) {
 
           <div className="kanvas-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
             <div className="filter-group">
-              <label><i className="ph ph-calendar" /> 贷款期限（年）</label>
+              <label><i className="ph ph-calendar" /> {t('calcLoanYears')}</label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <input
                   type="number"
@@ -235,86 +386,61 @@ export default function WinLoanCalc({ isOpen, onClose }) {
               </div>
             </div>
             <div className="filter-group">
-              <label><i className="ph ph-arrows-left-right" /> 还款方式</label>
+              <label><i className="ph ph-arrows-left-right" /> {t('calcLoanRepayType')}</label>
               <select
                 className="filter-input"
                 value={loanRepayType}
                 onChange={e => setLoanRepayType(e.target.value)}
               >
-                <option value="equal_payment">等额本息</option>
-                <option value="equal_principal">等额本金</option>
+                <option value="equal_payment">{t('calcLoanEqualPayment')}</option>
+                <option value="equal_principal">{t('calcLoanEqualPrincipal')}</option>
               </select>
             </div>
           </div>
           <div style={{ marginTop: '20px' }}>
             <button type="button" className="btn btn-accent" onClick={calculateLoan}>
-              <i className="ph ph-calculator" /> 立即计算
+              <i className="ph ph-calculator" /> {t('btnCalc')}
             </button>
           </div>
         </section>
         <section>
           <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
-            <i className="ph ph-chart-pie-slice" /> 还款概览
+            <i className="ph ph-chart-pie-slice" /> {t('calcLoanRepaymentOverview')}
           </div>
           <div style={{ background: 'var(--card-bg)', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
-              <span><i className="ph ph-money" /> 月供</span>
+              <span><i className="ph ph-money" /> {t('calcLoanMonthlyPayment')}</span>
               <b>{loanResult ? `¥${loanResult.monthlyPayment.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}</b>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
-              <span><i className="ph ph-stack" /> 总还款</span>
+              <span><i className="ph ph-stack" /> {t('calcLoanTotalPayment')}</span>
               <b>{loanResult ? `¥${loanResult.totalPayment.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}</b>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span><i className="ph ph-percent" /> 总利息</span>
+              <span><i className="ph ph-percent" /> {t('calcLoanTotalInterest')}</span>
               <b>{loanResult ? `¥${loanResult.totalInterest.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}</b>
             </div>
           </div>
           <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>
-            <i className="ph ph-table" /> 还款明细表
+            <i className="ph ph-chart-line" /> {t('calcLoanRepaymentChart')}
           </div>
-          <div style={{ background: 'var(--card-bg)', borderRadius: '8px', padding: '8px', maxHeight: '200px', overflowY: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-              <thead style={{ background: 'var(--border)', position: 'sticky', top: 0 }}>
-                <tr>
-                  <th style={{ padding: '8px', textAlign: 'left' }}>期数</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>月供</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>本金</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>利息</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>剩余</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loanResult ? (
-                  Array.from({ length: Math.min(12, parseInt(loanYears) * 12) }).map((_, i) => {
-                    const totalAmount = loanResult.totalAmount;
-                    const rate = (loanMode === 'commercial' ? parseFloat(loanCommercialRate) : parseFloat(loanFundRate)) / 100 / 12;
-                    const remaining = loanResult.totalAmount;
-                    const principalPerMonth = totalAmount / (parseInt(loanYears) * 12);
-                    const interest = remaining * rate;
-                    return (
-                      <tr key={i}>
-                        <td style={{ padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>第{i + 1}期</td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>
-                          ¥{(principalPerMonth + interest).toFixed(2)}
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>
-                          ¥{principalPerMonth.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>
-                          ¥{interest.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right', borderBottom: '1px solid var(--border)' }}>
-                          ¥{(totalAmount - principalPerMonth * (i + 1)).toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr><td colSpan="5" style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)' }}>请先计算</td></tr>
-                )}
-              </tbody>
-            </table>
+          <div style={{ height: '300px' }}>
+            {scheduleData ? (
+              <ReactECharts
+                option={getChartOption()}
+                style={{ height: '100%', width: '100%' }}
+              />
+            ) : (
+              <div style={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-muted)'
+              }}>
+                点击「{t('btnCalc')}」查看图表
+              </div>
+            )}
           </div>
         </section>
       </div>

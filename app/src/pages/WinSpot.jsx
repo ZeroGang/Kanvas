@@ -572,6 +572,7 @@ export function WinSpot({ t }) {
                           });
                           await loadMarketData();
                           await loadChartData();
+                          await loadMarketList();
                         }}
                       />
                       <span>{item.name_zh}</span>
@@ -592,6 +593,79 @@ export function WinSpot({ t }) {
             </div>
           </div>
         )}
+
+        {/* 品种行情列表 */}
+        <div className="card" style={{ marginTop: '16px' }}>
+          <div className="sec-header">
+            <div>
+              <div className="sec-title">
+                <i className="ph ph-list"></i> <span>品种行情</span>
+              </div>
+              <div className="sec-desc">
+                实时价格及涨跌幅
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                type="button" 
+                className="btn"
+                onClick={loadMarketList}
+              >
+                <i className="ph ph-arrows-clockwise"></i> <span>刷新</span>
+              </button>
+            </div>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>品种</th>
+                  <th style={{ textAlign: 'right', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>最新价格</th>
+                  <th style={{ textAlign: 'right', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>涨跌幅</th>
+                </tr>
+              </thead>
+              <tbody>
+                {marketList.map((inst, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-l)', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ fontWeight: '500' }}>{inst.name_zh}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{inst.name_en}</div>
+                    </td>
+                    <td style={{ textAlign: 'right', padding: '12px 16px', fontFamily: 'var(--mono)' }}>
+                      {inst.price !== null ? (
+                        <span>
+                          {inst.price.toLocaleString()}
+                          {inst.unit && <span style={{ marginLeft: '4px', color: 'var(--text-muted)' }}>{inst.unit}</span>}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right', padding: '12px 16px' }}>
+                      {inst.change !== null ? (
+                        <span style={{ 
+                          color: inst.change >= 0 ? '#4ade80' : '#f87171',
+                          fontWeight: '500',
+                          fontFamily: 'var(--mono)'
+                        }}>
+                          {inst.change >= 0 ? '+' : ''}{inst.change.toFixed(2)}%
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {/* 添加新品种行 */}
+                <tr style={{ cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'} onClick={() => setShowAddModal({ type: activeTab === 'metal' ? 'spot' : 'cn' })}>
+                  <td style={{ padding: '12px 16px', color: 'var(--accent)', textAlign: 'center' }} colSpan={3}>
+                    <i className="ph ph-plus-circle"></i> <span>添加品种</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
         <div className="kanvas-form-grid" style={{ maxWidth: '400px' }}>
           <div className="filter-group">
             <label>{t('spotDays')}</label>
