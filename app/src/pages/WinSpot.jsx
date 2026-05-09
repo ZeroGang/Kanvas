@@ -14,6 +14,7 @@ export function WinSpot({ t }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [spotCatalog, setSpotCatalog] = useState([]);
   const [cnCatalog, setCnCatalog] = useState([]);
+  const [marketList, setMarketList] = useState([]);
   
   const chartRef = useRef(null);
 
@@ -30,7 +31,7 @@ export function WinSpot({ t }) {
       if (statusRes.ok) {
         // 适配后端API格式
         setMarketStatus({
-          ma_period: 20,  // 默认值
+          ma_period: 20, // 默认值
           bars: statusRes.bar_count,
           active_name: statusRes.symbol,
           as_of: statusRes.last_bar_date,
@@ -65,6 +66,18 @@ export function WinSpot({ t }) {
       console.error('加载市场数据失败:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 加载品种行情列表
+  const loadMarketList = async () => {
+    try {
+      const res = await api(`/api/instruments/market-list?tab=${activeTab}`);
+      if (res.ok && res.instruments) {
+        setMarketList(res.instruments);
+      }
+    } catch (err) {
+      console.error('加载品种行情列表失败:', err);
     }
   };
 
@@ -166,6 +179,7 @@ export function WinSpot({ t }) {
       // 重新加载所有数据
       await loadMarketData();
       await loadChartData();
+      await loadMarketList();
     } catch (err) {
       console.error('获取市场数据失败:', err);
     }
@@ -175,6 +189,7 @@ export function WinSpot({ t }) {
   useEffect(() => {
     loadMarketData();
     loadChartData();
+    loadMarketList();
   }, [activeTab]);
 
   // 切换标签

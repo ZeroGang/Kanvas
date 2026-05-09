@@ -597,3 +597,73 @@ def get_sge_close_last_days(
 ) -> Tuple[List[str], List[float]]:
     """兼容旧调用：按 symbol 取最近交易日收盘价序列。"""
     return get_spot_close_last_days(symbol, days=days)
+
+
+def get_instruments_market_data(instruments: List[Dict[str, str]], config: Optional[Dict] = None) -> List[Dict[str, Any]]:
+    """获取多个品种的行情数据，包括最新价格和涨跌幅。"""
+    import pandas as pd
+    
+    result = []
+    for inst in instruments:
+        try:
+            df = load_spot_hist_csv(inst["id"])
+            if df is None or df.empty:
+                result.append({
+                    "id": inst["id"],
+                    "name_zh": inst["label_zh"],
+                    "name_en": inst["label_en"],
+                    "price": None,
+                    "change": None,
+                    "unit": inst["unit_zh"],
+                    "has_data": False
+                })
+                continue
+            
+            close_col = _pick_close_column(df)
+            date_col = _pick_date_column(df)
+            
+            d = df.copy()
+            if date_col:
+                d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
+                d = d.dropna(subset=[date_col]).sort_values(date_col)
+            
+            closes = pd.to_numeric(d[close_col], errors="coerce").dropna()
+            
+            if len(closes) < 2:
+                result.append({
+                    "id": inst["id"],
+                    "name_zh": inst["label_zh"],
+                    "name_en": inst["label_en"],
+                    "price": float(closes.iloc[-1]) if len(closes) >= 1 else None,
+                    "change": None,
+                    "unit": inst["unit_zh"],
+                    "has_data": len(closes) >= 1
+                })
+                continue
+            
+            last_price = float(closes.iloc[-1])
+            prev_price = float(closes.iloc[-2])
+            change = ((last_price - prev_price) / prev_price) * 100 if prev_price != 0 else None
+            
+            result.append({
+                "id": inst["id"],
+                "name_zh": inst["label_zh"],
+                "name_en": inst["label_en"],
+                "price": last_price,
+                "change": change,
+                "unit": inst["unit_zh"],
+                "has_data": True
+            })
+        except Exception as e:
+            _logger.warning(f"获取品种 {inst['id']} 行情失败: {e}")
+            result.append({
+                "id": inst["id"],
+                "name_zh": inst["label_zh"],
+                "name_en": inst["label_en"],
+                "price": None,
+                "change": None,
+                "unit": inst["unit_zh"],
+                "has_data": False
+            })
+    
+    return result

@@ -285,3 +285,11 @@ class APIHandlers:
             return self._success({"path": str(path), "rows": n})
         except Exception as e:
             return self._error(str(e), 500)
+
+    def instruments_market_list(self, query: Dict[str, str]) -> Dict[str, Any]:
+        try:
+            tab = query.get("tab", "metal")
+            res = self.market_svc.get_instruments_market_list(tab)
+            return self._success(res)
+        except Exception as e:
+            return self._error(str(e), 500)

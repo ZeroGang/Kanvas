@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactECharts from 'echarts-for-react';
 import WinModal from './WinModal';
 
 export default function WinCompoundCalc({ t, isOpen, onClose }) {
@@ -9,8 +10,6 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
   const [ciYears, setCiYears] = useState(10);
   const [ciResult, setCiResult] = useState(null);
   const [ciChartData, setCiChartData] = useState(null);
-  const chartRef = useRef(null);
-  const chartInstance = useRef(null);
 
   const calculateCompound = () => {
     const p = parseFloat(ciPrincipal) || 0;
@@ -59,66 +58,113 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || !ciChartData || !chartRef.current || !window.ApexCharts) {
-      return;
-    }
+  const getChartOption = () => {
+    if (!ciChartData) return {};
     
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
-    }
-    
-    const options = {
-      chart: {
-        type: 'area',
-        height: 200,
-        toolbar: { show: false },
-        background: 'transparent',
-      },
-      series: [
-        { name: '总金额', data: ciChartData.total },
-        { name: '累计本金', data: ciChartData.invested }
-      ],
-      xaxis: {
-        categories: ciChartData.years.map(y => `第${y}年`),
-        labels: { style: { colors: 'var(--text-muted)' } }
-      },
-      yaxis: {
-        labels: {
-          style: { colors: 'var(--text-muted)' },
-          formatter: (val) => `¥${(val / 10000).toFixed(0)}万`
-        }
-      },
-      colors: ['#22c55e', '#3b82f6'],
-      fill: {
-        type: 'gradient',
-        gradient: {
-          shadeIntensity: 1,
-          opacityFrom: 0.5,
-          opacityTo: 0.2,
-        }
-      },
-      dataLabels: { enabled: false },
-      grid: { borderColor: 'var(--border)' },
-      legend: {
-        labels: { colors: 'var(--text)' }
+    return {
+      title: {
+        show: false
       },
       tooltip: {
-        y: {
-          formatter: (val) => `¥${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+        trigger: 'axis',
+        formatter: (params) => {
+          let result = `第${params[0].name}年<br/>`;
+          params.forEach(param => {
+            result += `${param.marker} ${param.seriesName}: ¥${param.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}<br/>`;
+          });
+          return result;
         }
-      }
+      },
+      legend: {
+        data: ['总金额', '累计本金'],
+        textStyle: {
+          color: 'var(--text)'
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: ciChartData.years.map(y => `${y}年`),
+        axisLabel: {
+          color: 'var(--text-muted)'
+        },
+        axisLine: {
+          lineStyle: {
+            color: 'var(--border)'
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: 'var(--text-muted)',
+          formatter: (val) => `¥${(val / 10000).toFixed(0)}万`
+        },
+        axisLine: {
+          lineStyle: {
+            color: 'var(--border)'
+          }
+        },
+        splitLine: {
+          lineStyle: {
+            color: 'var(--border)'
+          }
+        }
+      },
+      series: [
+        {
+          name: '总金额',
+          type: 'line',
+          smooth: true,
+          data: ciChartData.total,
+          itemStyle: {
+            color: '#22c55e'
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(34, 197, 94, 0.5)' },
+                { offset: 1, color: 'rgba(34, 197, 94, 0.1)' }
+              ]
+            }
+          }
+        },
+        {
+          name: '累计本金',
+          type: 'line',
+          smooth: true,
+          data: ciChartData.invested,
+          itemStyle: {
+            color: '#3b82f6'
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(59, 130, 246, 0.5)' },
+                { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
+              ]
+            }
+          }
+        }
+      ]
     };
-    
-    chartInstance.current = new window.ApexCharts(chartRef.current, options);
-    chartInstance.current.render();
-    
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-      }
-    };
-  }, [isOpen, ciChartData]);
+  };
 
   if (!isOpen) return null;
 
@@ -215,15 +261,13 @@ export default function WinCompoundCalc({ t, isOpen, onClose }) {
               {ciResult ? `¥${ciResult.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}
             </div>
           </div>
-          <div 
-            ref={chartRef} 
-            style={{ 
-              height: '220px', 
-              marginBottom: '16px',
-              color: 'var(--text)',
-            }}
-          >
-            {!ciResult && (
+          <div style={{ height: '220px', marginBottom: '16px' }}>
+            {ciChartData ? (
+              <ReactECharts
+                option={getChartOption()}
+                style={{ height: '100%', width: '100%' }}
+              />
+            ) : (
               <div style={{ 
                 height: '100%', 
                 display: 'flex', 

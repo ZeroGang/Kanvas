@@ -252,6 +252,7 @@ class KanvasHandler(SimpleHTTPRequestHandler):
             "/api/backtest/saved": h.backtest_saved_get,
             "/api/backtest/saved/detail": lambda: h.backtest_saved_detail(query),
             "/api/holdings": h.holdings_get,
+            "/api/instruments/market-list": lambda: h.instruments_market_list(query),
         }
 
         handler = routes.get(path)

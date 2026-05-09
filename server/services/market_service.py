@@ -20,8 +20,8 @@ from core.cn_a_indices import (
 )
 from core.market import (
     fetch_hist_by_symbol,
-    get_gold_close_last_days,
-    get_sge_close_last_days,
+    get_spot_close_last_days,
+    get_instruments_market_data,
     load_spot_hist_csv,
     normalize_and_validate_spot_instrument_ids,
     read_gold_data_source,
@@ -85,10 +85,8 @@ class MarketService:
         """获取现货价格序列。"""
         if config is None:
             config = self.calc.config
-        source = read_gold_data_source(config)
-        if source == "london":
-            return get_gold_close_last_days(days)
-        return get_sge_close_last_days(days)
+        sym = read_spot_symbol(config)
+        return get_spot_close_last_days(sym, days, config=config)
 
     def get_spot_instruments(self, config: Dict[str, Any] | None = None) -> Dict[str, Any]:
         """获取现货品种列表。"""
@@ -189,3 +187,101 @@ class MarketService:
         ensure_cn_a_chart_id_valid(calc.config)
         calc.save_config()
         return {"items": cn_a_indices(calc.config)}
+
+    def get_instruments_market_list(self, tab: str = "metal", config: Dict[str, Any] | None = None) -> Dict[str, Any]:
+        """获取品种行情列表，包含名称、最新价格、涨跌幅。"""
+        if config is None:
+            config = self.calc.config
+        
+        if tab == "metal":
+            instruments = spot_instruments(config)
+            market_data = get_instruments_market_data(instruments, config)
+        else:
+            instruments = cn_a_indices(config)
+            market_data = self._get_cn_instruments_market_data(instruments, config)
+        
+        return {
+            "tab": tab,
+            "instruments": market_data
+        }
+
+    def _get_cn_instruments_market_data(self, instruments: List[Dict[str, str]], config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """获取 A 股指数的行情数据。"""
+        from core.cn_a_indices import load_cn_index_hist_csv
+        
+        result = []
+        for inst in instruments:
+            try:
+                df = load_cn_index_hist_csv(inst["id"])
+                if df is None or df.empty:
+                    result.append({
+                        "id": inst["id"],
+                        "name_zh": inst["label_zh"],
+                        "name_en": inst["label_en"],
+                        "price": None,
+                        "change": None,
+                        "unit": "",
+                        "has_data": False
+                    })
+                    continue
+                
+                import pandas as pd
+                close_col = "close"
+                if "收盘" in df.columns:
+                    close_col = "收盘"
+                elif "收盘价" in df.columns:
+                    close_col = "收盘价"
+                
+                date_col = "date"
+                if "日期" in df.columns:
+                    date_col = "日期"
+                elif "时间" in df.columns:
+                    date_col = "时间"
+                
+                d = df.copy()
+                if date_col in df.columns:
+                    d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
+                    d = d.dropna(subset=[date_col]).sort_values(date_col)
+                
+                closes = pd.to_numeric(d[close_col], errors="coerce").dropna()
+                
+                if len(closes) < 2:
+                    result.append({
+                        "id": inst["id"],
+                        "name_zh": inst["label_zh"],
+                        "name_en": inst["label_en"],
+                        "price": float(closes.iloc[-1]) if len(closes) >= 1 else None,
+                        "change": None,
+                        "unit": "",
+                        "has_data": len(closes) >= 1
+                    })
+                    continue
+                
+                last_price = float(closes.iloc[-1])
+                prev_price = float(closes.iloc[-2])
+                change = ((last_price - prev_price) / prev_price) * 100 if prev_price != 0 else None
+                
+                result.append({
+                    "id": inst["id"],
+                    "name_zh": inst["label_zh"],
+                    "name_en": inst["label_en"],
+                    "price": last_price,
+                    "change": change,
+                    "unit": "",
+                    "has_data": True
+                })
+            except Exception as e:
+                from logging import getLogger
+                logger = getLogger("Kanvas")
+                logger.warning(f"获取指数 {inst['id']} 行情失败: {e}")
+                result.append({
+                    "id": inst["id"],
+                    "name_zh": inst["label_zh"],
+                    "name_en": inst["label_en"],
+                    "price": None,
+                    "change": None,
+                    "unit": "",
+                    "has_data": False
+                })
+        
+        return result
