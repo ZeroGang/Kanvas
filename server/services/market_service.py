@@ -221,7 +221,8 @@ class MarketService:
                         "price": None,
                         "change": None,
                         "unit": "",
-                        "has_data": False
+                        "has_data": False,
+                        "update_time": None
                     })
                     continue
                 
@@ -239,9 +240,12 @@ class MarketService:
                     date_col = "时间"
                 
                 d = df.copy()
+                last_date = None
                 if date_col in df.columns:
                     d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
                     d = d.dropna(subset=[date_col]).sort_values(date_col)
+                    if len(d) > 0:
+                        last_date = d[date_col].iloc[-1]
                 
                 closes = pd.to_numeric(d[close_col], errors="coerce").dropna()
                 
@@ -253,7 +257,8 @@ class MarketService:
                         "price": float(closes.iloc[-1]) if len(closes) >= 1 else None,
                         "change": None,
                         "unit": "",
-                        "has_data": len(closes) >= 1
+                        "has_data": len(closes) >= 1,
+                        "update_time": last_date
                     })
                     continue
                 
@@ -268,7 +273,8 @@ class MarketService:
                     "price": last_price,
                     "change": change,
                     "unit": "",
-                    "has_data": True
+                    "has_data": True,
+                    "update_time": last_date
                 })
             except Exception as e:
                 from logging import getLogger
@@ -281,7 +287,19 @@ class MarketService:
                     "price": None,
                     "change": None,
                     "unit": "",
-                    "has_data": False
+                    "has_data": False,
+                    "update_time": None
                 })
         
         return result
+
+    def get_instrument_series(self, symbol: str, days: int = 30, tab: str = "metal") -> List[Dict[str, Any]]:
+        """获取单个品种的历史价格序列。"""
+        if tab == "metal":
+            from core.market import get_spot_close_last_days
+            dates, prices = get_spot_close_last_days(symbol, days)
+        else:
+            from core.cn_a_indices import get_cn_index_close_last_days
+            dates, prices = get_cn_index_close_last_days(symbol, days)
+        
+        return [{"date": d, "price": p} for d, p in zip(dates, prices)]

@@ -34,8 +34,8 @@ SYMBOL_LONDON = "XAU"
 
 # 系统品类目录（与 AkShare spot_symbol_table_sge / spot_hist_sge + 伦敦 XAU 一致）
 SPOT_INSTRUMENT_CATALOG: List[Dict[str, str]] = [
-    {"id": "Au99.99", "label_zh": "上海金 Au99.99", "label_en": "SGE Au 99.99", "unit_zh": "元/克", "unit_en": "CNY/g"},
-    {"id": "Au99.95", "label_zh": "上海金 Au99.95", "label_en": "SGE Au 99.95", "unit_zh": "元/克", "unit_en": "CNY/g"},
+    {"id": "Au99.99", "label_zh": "上海金", "label_en": "SGE Au 99.99", "unit_zh": "元/克", "unit_en": "CNY/g"},
+    {"id": "Au99.95", "label_zh": "上海金", "label_en": "SGE Au 99.95", "unit_zh": "元/克", "unit_en": "CNY/g"},
     {"id": "Au100g", "label_zh": "100 克金条", "label_en": "Au 100g bar", "unit_zh": "元/克", "unit_en": "CNY/g"},
     {"id": "Pt99.95", "label_zh": "铂金 Pt99.95", "label_en": "SGE Pt 99.95", "unit_zh": "元/克", "unit_en": "CNY/g"},
     {"id": "Ag(T+D)", "label_zh": "白银 T+D", "label_en": "Silver T+D", "unit_zh": "元/千克", "unit_en": "CNY/kg"},
@@ -615,7 +615,8 @@ def get_instruments_market_data(instruments: List[Dict[str, str]], config: Optio
                     "price": None,
                     "change": None,
                     "unit": inst["unit_zh"],
-                    "has_data": False
+                    "has_data": False,
+                    "update_time": None
                 })
                 continue
             
@@ -623,9 +624,12 @@ def get_instruments_market_data(instruments: List[Dict[str, str]], config: Optio
             date_col = _pick_date_column(df)
             
             d = df.copy()
+            last_date = None
             if date_col:
                 d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
                 d = d.dropna(subset=[date_col]).sort_values(date_col)
+                if len(d) > 0:
+                    last_date = d[date_col].iloc[-1]
             
             closes = pd.to_numeric(d[close_col], errors="coerce").dropna()
             
@@ -637,7 +641,8 @@ def get_instruments_market_data(instruments: List[Dict[str, str]], config: Optio
                     "price": float(closes.iloc[-1]) if len(closes) >= 1 else None,
                     "change": None,
                     "unit": inst["unit_zh"],
-                    "has_data": len(closes) >= 1
+                    "has_data": len(closes) >= 1,
+                    "update_time": last_date
                 })
                 continue
             
@@ -652,7 +657,8 @@ def get_instruments_market_data(instruments: List[Dict[str, str]], config: Optio
                 "price": last_price,
                 "change": change,
                 "unit": inst["unit_zh"],
-                "has_data": True
+                "has_data": True,
+                "update_time": last_date
             })
         except Exception as e:
             _logger.warning(f"获取品种 {inst['id']} 行情失败: {e}")
@@ -663,7 +669,8 @@ def get_instruments_market_data(instruments: List[Dict[str, str]], config: Optio
                 "price": None,
                 "change": None,
                 "unit": inst["unit_zh"],
-                "has_data": False
+                "has_data": False,
+                "update_time": None
             })
     
     return result

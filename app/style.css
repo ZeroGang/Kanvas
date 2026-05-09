@@ -181,12 +181,11 @@ h1,h2,h3 { font-weight:600; letter-spacing:-0.02em; }
 @keyframes pageIn { from{opacity:0;transform:translateY(16px) scale(0.99)} to{opacity:1;transform:translateY(0) scale(1)} }
 
 /* ---- Card ---- */
-.card { background:var(--card-bg); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid var(--card-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); transition:all .35s cubic-bezier(.4,0,.2,1); position:relative; overflow:hidden; }
+.card { background:var(--card-bg); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid var(--card-border); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); position:relative; overflow:hidden; }
 /* Top edge highlight line on cards */
 .card::after { content:''; position:absolute; top:0; left:10%; right:10%; height:1px; background:linear-gradient(90deg, transparent, rgba(52,211,153,0.15), transparent); pointer-events:none; }
 .card::before { content:''; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg, rgba(52,211,153,0.04) 0%, transparent 40%, rgba(192,132,252,0.03) 100%); pointer-events:none; opacity:0; transition:opacity .4s; }
-.card:hover { box-shadow:var(--shadow-md), var(--card-glow, none); border-color:rgba(52,211,153,0.12); transform:translateY(-2px); }
-.card:hover::before { opacity:1; }
+
 [data-theme="light"] .card::after { background:linear-gradient(90deg, transparent, rgba(5,150,105,0.1), transparent); }
 [data-theme="light"] .card::before { background:linear-gradient(135deg, rgba(5,150,105,0.025) 0%, transparent 50%, rgba(30,58,95,0.015) 100%); }
 [data-theme="light"] .sidebar-logo { background:var(--accent-grad); color:#fff; box-shadow:0 2px 10px rgba(5,150,105,0.15); }
@@ -998,6 +997,210 @@ tr:nth-child(even) td { background:var(--stripe); }
   /* 调整页面间距 */
   .overview-top {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
+   用户头像和设置页面样式
+   ======================================== */
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--accent-bg);
+  border: 1px solid transparent;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* 页面头部右侧 */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  min-height: 40px;
+}
+
+.page-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 移动端头部标题 */
+.mobile-header-content {
+  justify-content: space-between;
+}
+
+.mobile-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.mobile-header-title-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-0);
+  margin: 0;
+}
+
+.mobile-header-back {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: all 0.2s;
+}
+
+.mobile-header-back:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-bg);
+}
+
+/* ========================================
+   设置页面样式
+   ======================================== */
+
+.settings-page {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.settings-header {
+  margin-bottom: var(--space-xl);
+  display: none;
+}
+
+.settings-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-1);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.settings-back-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-bg);
+}
+
+.settings-back-btn i {
+  font-size: 20px;
+}
+
+.settings-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-0);
+  margin: 0;
+}
+
+.settings-content {
+  margin-top: var(--space-lg);
+}
+
+.settings-section {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-item:hover {
+  background: var(--bg-2);
+}
+
+.settings-item-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-0);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.settings-item-label i {
+  font-size: 22px;
+  color: var(--accent);
+}
+
+.settings-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text-1);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.settings-toggle-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-bg);
+}
+
+.settings-toggle-btn i {
+  font-size: 16px;
+}
+
+/* 桌面端设置页面显示返回按钮 */
+@media(min-width:769px) {
+  .settings-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--space-xl);
   }
 }
 

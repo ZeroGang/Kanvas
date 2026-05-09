@@ -7,6 +7,7 @@ import { WinSpot } from './pages/WinSpot.jsx';
 import { WinHoldings } from './pages/WinHoldings.jsx';
 import { WinStrategy } from './pages/WinStrategy.jsx';
 import { WinBacktest } from './pages/WinBacktest.jsx';
+import { WinSettings } from './pages/WinSettings.jsx';
 
 function LoadingScreen({ t }) {
   return (
@@ -22,6 +23,8 @@ function LoadingScreen({ t }) {
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showSettings, setShowSettings] = useState(false);
+  const [previousPage, setPreviousPage] = useState('account');
   const { page, setPage } = useHashPage();
   const { t, lang, toggleLang } = useI18n();
   const { theme, toggleTheme } = useTheme();
@@ -56,7 +59,29 @@ export default function App() {
     return item ? item.label : t('navOverview');
   };
 
+  const handleSettingsClick = () => {
+    setPreviousPage(page);
+    setShowSettings(true);
+  };
+
+  const handleBackFromSettings = () => {
+    setShowSettings(false);
+  };
+
   function renderPage() {
+    if (showSettings) {
+      return (
+        <WinSettings 
+          t={t} 
+          lang={lang} 
+          toggleLang={toggleLang}
+          theme={theme} 
+          toggleTheme={toggleTheme}
+          onBack={handleBackFromSettings}
+        />
+      );
+    }
+    
     switch (page) {
       case 'account':
         return <WinAccount t={t} />;
@@ -105,11 +130,11 @@ export default function App() {
             ))}
           </nav>
           <div className="sidebar-footer">
-            <button type="button" className="sidebar-btn" onClick={toggleLang} title="Language">
-              <i className="ph ph-translate"></i> <span>{lang === 'zh' ? 'EN' : '中'}</span>
-            </button>
-            <button type="button" className="sidebar-btn" onClick={toggleTheme} title="Theme">
-              <i className={theme === 'dark' ? 'ph ph-moon' : 'ph ph-sun'}></i>
+            <div className="user-avatar" onClick={handleSettingsClick}>
+              <i className="ph ph-user-circle"></i>
+            </div>
+            <button type="button" className="sidebar-btn" onClick={handleSettingsClick} title="Settings">
+              <i className="ph ph-gear"></i>
             </button>
             <button type="button" className="sidebar-btn" title="Refresh">
               <i className="ph ph-arrows-clockwise"></i>
@@ -124,14 +149,28 @@ export default function App() {
         {isMobile && (
           <header className="mobile-header">
             <div className="mobile-header-content">
-              <div className="mobile-header-actions">
-                <button type="button" className="mobile-header-btn" onClick={toggleLang} title="Language">
-                  <i className="ph ph-translate"></i>
-                </button>
-                <button type="button" className="mobile-header-btn" onClick={toggleTheme} title="Theme">
-                  <i className={theme === 'dark' ? 'ph ph-moon' : 'ph ph-sun'}></i>
-                </button>
-              </div>
+              {showSettings ? (
+                <div className="mobile-header-title">
+                  <button 
+                    className="mobile-header-back"
+                    onClick={handleBackFromSettings}
+                  >
+                    <i className="ph ph-arrow-left"></i>
+                  </button>
+                  <h1 className="mobile-header-title-text">{t('settingsPageTitle')}</h1>
+                </div>
+              ) : (
+                <>
+                  <div className="mobile-header-title">
+                    <h1 className="mobile-header-title-text">{getPageTitle()}</h1>
+                  </div>
+                  <div className="mobile-header-actions">
+                    <div className="user-avatar" onClick={handleSettingsClick}>
+                      <i className="ph ph-user-circle"></i>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </header>
         )}
@@ -142,6 +181,11 @@ export default function App() {
             <div className="page-header-left">
               <span className="meta page-header-last-up-narrow" data-last-up aria-hidden="true"></span>
             </div>
+            <div className="page-header-right">
+              <div className="user-avatar" onClick={handleSettingsClick}>
+                <i className="ph ph-user-circle"></i>
+              </div>
+            </div>
           </header>
         )}
 
@@ -151,7 +195,7 @@ export default function App() {
       </main>
 
       {/* 移动端底部Tab导航 */}
-      {isMobile && (
+      {isMobile && !showSettings && (
         <nav className="mobile-tab-bar">
           <div className="tab-bar-container">
             {navItems.map((item) => (

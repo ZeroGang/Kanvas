@@ -249,6 +249,7 @@ class KanvasHandler(SimpleHTTPRequestHandler):
             "/api/cn-index/status": lambda: h.cn_index_status(query),
             "/api/cn-index-series": lambda: h.cn_index_series(query),
             "/api/spot-series": lambda: h.spot_series(query),
+            "/api/instrument-series": lambda: h.instrument_series(query),
             "/api/backtest/saved": h.backtest_saved_get,
             "/api/backtest/saved/detail": lambda: h.backtest_saved_detail(query),
             "/api/holdings": h.holdings_get,

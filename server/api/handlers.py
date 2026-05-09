@@ -201,6 +201,21 @@ class APIHandlers:
         except Exception as e:
             return self._error(str(e), 500)
 
+    def instrument_series(self, query: Dict[str, str]) -> Dict[str, Any]:
+        try:
+            symbol = query.get("symbol", "")
+            days = int(query.get("days", "30"))
+            tab = query.get("tab", "metal")
+            print(f"[DEBUG] instrument_series: symbol={symbol}, days={days}, tab={tab}")
+            series = self.market_svc.get_instrument_series(symbol, days, tab)
+            print(f"[DEBUG] Got series: {len(series)} items")
+            return self._success({"series": series})
+        except Exception as e:
+            print(f"[ERROR] instrument_series: {e}")
+            import traceback
+            traceback.print_exc()
+            return self._error(str(e), 500)
+
     def backtest_run(self, body: Dict[str, Any]) -> Dict[str, Any]:
         try:
             days = int(body.get("days", 3650))

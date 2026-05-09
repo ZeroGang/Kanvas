@@ -11,12 +11,6 @@ export function WinHoldings({ t }) {
   return (
     <>
       <div className="card sec">
-        <div className="sec-header">
-          <div>
-            <div className="sec-title"><i className="ph ph-calculator" /> <span>{t('calcPageTitle')}</span></div>
-            <div className="sec-desc">{t('calcPageDesc')}</div>
-          </div>
-        </div>
         <div className="calc-tool-grid">
           <button type="button" className="calc-tool-card" onClick={() => setActiveModal('today')}>
             <i className="ph ph-chart-line-up" /> <span>{t('calcMaBlockTitle')}</span>

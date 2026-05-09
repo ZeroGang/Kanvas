@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactECharts from 'echarts-for-react';
 import { api } from '../lib/api.js';
 
 export function WinSpot({ t }) {
-  const [activeTab, setActiveTab] = useState('metal');
+  const [marketList, setMarketList] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showChartModal, setShowChartModal] = useState(false);
+  const [selectedInstrument, setSelectedInstrument] = useState(null);
+  const [chartData, setChartData] = useState([]);
+  const [loadingChart, setLoadingChart] = useState(false);
   const [spotInstruments, setSpotInstruments] = useState([]);
   const [cnIndexInstruments, setCnIndexInstruments] = useState([]);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [spotCatalog, setSpotCatalog] = useState([]);
   const [cnCatalog, setCnCatalog] = useState([]);
-  const [marketList, setMarketList] = useState([]);
+  const chartRef = useRef(null);
 
   // 加载基础数据
   const loadBaseData = async () => {
@@ -39,13 +44,18 @@ export function WinSpot({ t }) {
     }
   };
 
-  // 加载品种行情列表
+  // 加载品种行情列表（同时加载黄金和指数）
   const loadMarketList = async () => {
     try {
-      const res = await api(`/api/instruments/market-list?tab=${activeTab}`);
-      if (res.ok && res.instruments) {
-        setMarketList(res.instruments);
-      }
+      const [metalRes, cnRes] = await Promise.all([
+        api('/api/instruments/market-list?tab=metal'),
+        api('/api/instruments/market-list?tab=cn')
+      ]);
+      
+      const metalList = metalRes.ok && metalRes.instruments ? metalRes.instruments : [];
+      const cnList = cnRes.ok && cnRes.instruments ? cnRes.instruments : [];
+      
+      setMarketList([...metalList, ...cnList]);
     } catch (err) {
       console.error('加载品种行情列表失败:', err);
     }
@@ -80,204 +90,251 @@ export function WinSpot({ t }) {
     await loadMarketList();
   };
 
-  // 重置为默认品种
-  const resetInstruments = async (isSpot) => {
-    const endpoint = isSpot ? '/api/spot/instruments' : '/api/cn-a-index/instruments';
-    await api(endpoint, {
-      method: 'POST',
-      body: JSON.stringify({ reset_default: true })
-    });
-    await loadBaseData();
+  // 加载品种历史数据
+  const loadInstrumentSeries = async (instrument) => {
+    const isSpot = spotCatalog.some(item => item.id === instrument.id);
+    const tab = isSpot ? 'metal' : 'cn';
+    return api(`/api/instrument-series?symbol=${instrument.id}&days=30&tab=${tab}`);
   };
 
-  // 初始化和切换标签时加载数据
+  // 点击品种行打开图表
+  const handleInstrumentClick = async (instrument) => {
+    setSelectedInstrument(instrument);
+    setShowChartModal(true);
+    setLoadingChart(true);
+    setChartData([]); // 先清空，然后显示加载状态
+    try {
+      const res = await loadInstrumentSeries(instrument);
+      console.log('API响应:', res); // 添加调试
+      if (res.ok && res.series) {
+        setChartData(res.series);
+      } else {
+        console.log('数据为空:', res);
+      }
+    } catch (err) {
+      console.error('加载历史数据失败:', err);
+    } finally {
+      setLoadingChart(false);
+    }
+  };
+
+  // 初始化时加载数据
   useEffect(() => {
     loadBaseData();
     loadMarketList();
-  }, [activeTab]);
+  }, []);
 
-  // 切换标签
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
+  // 图表配置
+  const getChartOption = () => {
+    if (loadingChart) {
+      return {
+        title: {
+          text: '加载中...',
+          left: 'center',
+          textStyle: { color: '#999' }
+        }
+      };
+    }
+    
+    if (!chartData || !chartData.length) {
+      return {
+        title: {
+          text: '暂无数据',
+          left: 'center',
+          textStyle: { color: '#999' }
+        }
+      };
+    }
+
+    const dates = chartData.map(d => d.date);
+    const prices = chartData.map(d => d.price);
+
+    return {
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(20, 24, 35, 0.95)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        textStyle: { color: '#fff' }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '10%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: dates,
+        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+        axisLabel: { color: 'rgba(255, 255, 255, 0.6)' }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.1)' } },
+        axisLabel: { color: 'rgba(255, 255, 255, 0.6)' },
+        splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } }
+      },
+      series: [
+        {
+          name: '价格',
+          type: 'line',
+          data: prices,
+          smooth: true,
+          lineStyle: { color: '#c9a227', width: 2 },
+          itemStyle: { color: '#c9a227' },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(201, 162, 39, 0.3)' },
+                { offset: 1, color: 'rgba(201, 162, 39, 0)' }
+              ]
+            }
+          }
+        }
+      ]
+    };
   };
 
   return (
     <>
       <div className="card sec">
-        <div className="sec-header">
-          <div>
-            <div className="sec-title">
-              <i className="ph ph-chart-line"></i> <span>{t('spotTitle')}</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <button 
-              type="button" 
-              className="btn"
-              onClick={loadMarketList}
-            >
-              <i className="ph ph-arrows-clockwise"></i> <span>刷新</span>
-            </button>
-          </div>
-        </div>
-        <div className="spot-market-tabs" role="tablist" aria-label="market kind">
+        {/* 按钮区域 */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <button 
             type="button" 
-            className={`spot-market-tab ${activeTab === 'metal' ? 'is-active' : ''}`} 
-            role="tab" 
-            data-spot-tab="metal"
-            onClick={() => handleTabChange('metal')}
+            className="btn"
+            onClick={loadMarketList}
           >
-            {t('spotTabMetal')}
+            <i className="ph ph-arrows-clockwise"></i> <span>刷新</span>
           </button>
           <button 
             type="button" 
-            className={`spot-market-tab ${activeTab === 'cn' ? 'is-active' : ''}`} 
-            role="tab" 
-            data-spot-tab="cn"
-            onClick={() => handleTabChange('cn')}
+            className="btn"
+            onClick={() => setShowAddModal(true)}
           >
-            {t('spotTabCnIndex')}
+            <i className="ph ph-plus-circle"></i> <span>新增</span>
           </button>
-        </div>
-        <div 
-          className="spot-instruments-block" 
-          id="spotMetalSection"
-          style={{ display: activeTab === 'metal' ? 'block' : 'none' }}
-        >
-          <div className="spot-instruments-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('spotCategory')}</span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                type="button"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)' }}
-                onClick={() => resetInstruments(true)}
-                title="重置默认"
-              >
-                <i className="ph ph-arrow-counter-clockwise"></i>
-              </button>
-              <button 
-                type="button"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text-muted)' }}
-                onClick={() => setShowAddModal({ type: 'spot' })}
-                title="管理品种"
-              >
-                <i className="ph ph-plus-circle"></i>
-              </button>
-            </div>
-          </div>
-          <div className="spot-instrument-list" id="spotInstrumentList" role="list">
-            {spotInstruments.map((inst, idx) => (
-              <div 
-                key={idx}
-                className={`spot-instrument ${inst.active ? 'is-active' : ''}`}
-                role="listitem"
-              >
-                <input 
-                  type="checkbox" 
-                  className="spot-instrument-check" 
-                  checked={inst.active || false}
-                  onChange={() => toggleInstrument(inst, true)}
-                  id={`spot-inst-${idx}`}
-                />
-                <label htmlFor={`spot-inst-${idx}`} className="spot-instrument-label">
-                  {inst.name_zh}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div 
-          className="spot-instruments-block" 
-          id="spotCnIndexSection"
-          style={{ display: activeTab === 'cn' ? 'block' : 'none' }}
-        >
-          <div className="spot-instruments-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{t('spotCnCategory')}</span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                type="button"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)' }}
-                onClick={() => resetInstruments(false)}
-                title="重置默认"
-              >
-                <i className="ph ph-arrow-counter-clockwise"></i>
-              </button>
-              <button 
-                type="button"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text-muted)' }}
-                onClick={() => setShowAddModal({ type: 'cn' })}
-                title="管理品种"
-              >
-                <i className="ph ph-plus-circle"></i>
-              </button>
-            </div>
-          </div>
-          <div className="spot-instrument-list" id="cnIndexInstrumentList" role="list">
-            {cnIndexInstruments.map((inst, idx) => (
-              <div 
-                key={idx}
-                className={`spot-instrument ${inst.active ? 'is-active' : ''}`}
-                role="listitem"
-              >
-                <input 
-                  type="checkbox" 
-                  className="spot-instrument-check" 
-                  checked={inst.active || false}
-                  onChange={() => toggleInstrument(inst, false)}
-                  id={`cn-inst-${idx}`}
-                />
-                <label htmlFor={`cn-inst-${idx}`} className="spot-instrument-label">
-                  {inst.name_zh}
-                </label>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* 品种管理弹窗 */}
-        {showAddModal && (
+        {/* 品种行情列表 */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>品种</th>
+                <th style={{ textAlign: 'right', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>净值</th>
+                <th style={{ textAlign: 'right', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>涨跌幅</th>
+              </tr>
+            </thead>
+            <tbody>
+              {marketList.map((inst, idx) => {
+                // 格式化更新时间为 mm-dd 格式
+                let updateTimeStr = '';
+                if (inst.update_time) {
+                  const date = new Date(inst.update_time);
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  updateTimeStr = `${month}-${day}`;
+                }
+                
+                return (
+                  <tr 
+                    key={idx} 
+                    style={{ 
+                      borderBottom: '1px solid var(--border-l)', 
+                      transition: 'background-color 0.2s',
+                      cursor: 'pointer'
+                    }} 
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-2)'} 
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onClick={() => handleInstrumentClick(inst)}
+                  >
+                    <td style={{ padding: '12px 16px' }}>
+                    <div style={{ fontWeight: '500' }}>{inst.name_zh}({inst.id})</div>
+                  </td>
+                    <td style={{ textAlign: 'right', padding: '12px 16px', fontFamily: 'var(--mono)' }}>
+                      {inst.price !== null ? (
+                        <>
+                          <div style={{ fontSize: '18px', fontWeight: '500' }}>{inst.price}</div>
+                          {updateTimeStr && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{updateTimeStr}</div>}
+                        </>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right', padding: '12px 16px' }}>
+                      {inst.change !== null ? (
+                        <span style={{ 
+                          display: 'inline-block',
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          backgroundColor: inst.change >= 0 ? '#f87171' : '#4ade80',
+                          color: '#fff',
+                          fontWeight: '500',
+                          fontFamily: 'var(--mono)',
+                          fontSize: '13px'
+                        }}>
+                          {inst.change >= 0 ? '+' : ''}{inst.change.toFixed(2)}%
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 品种管理弹窗 */}
+      {showAddModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }} onClick={() => setShowAddModal(false)}>
           <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000
-          }} onClick={() => setShowAddModal(null)}>
-            <div style={{
-              backgroundColor: 'var(--card-bg)',
-              borderRadius: '12px',
-              padding: '24px',
-              minWidth: '400px',
-              maxHeight: '80vh',
-              overflow: 'auto'
-            }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>
-                  {showAddModal.type === 'spot' ? '管理黄金品种' : '管理指数品种'}
-                </h3>
-                <button 
-                  type="button" 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}
-                  onClick={() => setShowAddModal(null)}
-                >
-                  &times;
-                </button>
-              </div>
-              
+            backgroundColor: 'var(--card-bg)',
+            borderRadius: '12px',
+            padding: '24px',
+            minWidth: '500px',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>管理品种</h3>
+              <button 
+                type="button" 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px' }}
+                onClick={() => setShowAddModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+            
+            {/* 黄金品种 */}
+            <div style={{ marginBottom: '24px' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)' }}>黄金品种</h4>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px'
               }}>
-                {(showAddModal.type === 'spot' ? spotCatalog : cnCatalog).map((item, idx) => {
-                  const isActive = (showAddModal.type === 'spot' ? spotInstruments : cnIndexInstruments)
-                    .find(inst => inst.id === item.id)?.active;
+                {spotCatalog.map((item, idx) => {
+                  const isActive = spotInstruments.find(inst => inst.id === item.id)?.active;
                   
                   return (
                     <label key={idx} style={{
@@ -293,7 +350,7 @@ export function WinSpot({ t }) {
                         type="checkbox" 
                         checked={isActive || false}
                         onChange={async () => {
-                          const currentList = showAddModal.type === 'spot' ? [...spotInstruments] : [...cnIndexInstruments];
+                          const currentList = [...spotInstruments];
                           
                           let updatedList;
                           const existing = currentList.find(inst => inst.id === item.id);
@@ -309,15 +366,9 @@ export function WinSpot({ t }) {
                             updatedList = [...currentList, { ...item, active: true }];
                           }
                           
-                          if (showAddModal.type === 'spot') {
-                            setSpotInstruments(updatedList);
-                          } else {
-                            setCnIndexInstruments(updatedList);
-                          }
+                          setSpotInstruments(updatedList);
                           
-                          const endpoint = showAddModal.type === 'spot' 
-                            ? '/api/spot/instruments' 
-                            : '/api/cn-a-index/instruments';
+                          const endpoint = '/api/spot/instruments';
                           await api(endpoint, {
                             method: 'POST',
                             body: JSON.stringify({ 
@@ -327,83 +378,130 @@ export function WinSpot({ t }) {
                           await loadMarketList();
                         }}
                       />
-                      <span>{item.name_zh}</span>
+                      <span>{item.label_zh}</span>
                     </label>
                   );
                 })}
               </div>
-              
-              <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                <button 
-                  type="button"
-                  className="btn"
-                  onClick={() => setShowAddModal(null)}
-                >
-                  关闭
-                </button>
-              </div>
             </div>
-          </div>
-        )}
 
-        {/* 品种行情列表 */}
-        <div className="card" style={{ marginTop: '16px' }}>
-          <div className="sec-header">
+            {/* 指数品种 */}
             <div>
-              <div className="sec-title">
-                <i className="ph ph-list"></i> <span>品种行情</span>
-              </div>
-              <div className="sec-desc">
-                实时价格及涨跌幅
+              <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)' }}>指数品种</h4>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '8px'
+              }}>
+                {cnCatalog.map((item, idx) => {
+                  const isActive = cnIndexInstruments.find(inst => inst.id === item.id)?.active;
+                  
+                  return (
+                    <label key={idx} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      backgroundColor: isActive ? 'var(--accent-bg)' : 'transparent',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isActive || false}
+                        onChange={async () => {
+                          const currentList = [...cnIndexInstruments];
+                          
+                          let updatedList;
+                          const existing = currentList.find(inst => inst.id === item.id);
+                          
+                          if (existing) {
+                            updatedList = currentList.map(inst => {
+                              if (inst.id === item.id) {
+                                return { ...inst, active: !inst.active };
+                              }
+                              return inst;
+                            });
+                          } else {
+                            updatedList = [...currentList, { ...item, active: true }];
+                          }
+                          
+                          setCnIndexInstruments(updatedList);
+                          
+                          const endpoint = '/api/cn-a-index/instruments';
+                          await api(endpoint, {
+                            method: 'POST',
+                            body: JSON.stringify({ 
+                              items: updatedList.filter(inst => inst.active).map(inst => inst.id) 
+                            })
+                          });
+                          await loadMarketList();
+                        }}
+                      />
+                      <span>{item.label_zh}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>品种</th>
-                  <th style={{ textAlign: 'right', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>最新价格</th>
-                  <th style={{ textAlign: 'right', padding: '12px 16px', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>涨跌幅</th>
-                </tr>
-              </thead>
-              <tbody>
-                {marketList.map((inst, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-l)', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-2)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: '500' }}>{inst.name_zh}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{inst.name_en}</div>
-                    </td>
-                    <td style={{ textAlign: 'right', padding: '12px 16px', fontFamily: 'var(--mono)' }}>
-                      {inst.price !== null ? (
-                        <span>
-                          {inst.price.toLocaleString()}
-                          {inst.unit && <span style={{ marginLeft: '4px', color: 'var(--text-muted)' }}>{inst.unit}</span>}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right', padding: '12px 16px' }}>
-                      {inst.change !== null ? (
-                        <span style={{ 
-                          color: inst.change >= 0 ? '#4ade80' : '#f87171',
-                          fontWeight: '500',
-                          fontFamily: 'var(--mono)'
-                        }}>
-                          {inst.change >= 0 ? '+' : ''}{inst.change.toFixed(2)}%
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            
+            <div style={{ marginTop: '24px', textAlign: 'right' }}>
+              <button 
+                type="button"
+                className="btn"
+                onClick={() => setShowAddModal(false)}
+              >
+                关闭
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* 图表弹窗 */}
+      {showChartModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'var(--bg-0)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '16px 24px',
+            borderBottom: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-1)'
+          }}>
+            <button 
+              className="settings-back-btn"
+              onClick={() => setShowChartModal(false)}
+            >
+              <i className="ph ph-arrow-left"></i>
+            </button>
+            <h1 className="settings-title" style={{ marginLeft: '16px' }}>
+              {selectedInstrument?.name_zh}({selectedInstrument?.id})
+            </h1>
+          </div>
+          <div style={{ flex: 1, padding: '24px', backgroundColor: 'var(--bg-0)' }}>
+            <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <ReactECharts 
+                key={`${selectedInstrument?.id || 'empty'}-${loadingChart}-${chartData.length}`}
+                ref={chartRef}
+                option={getChartOption()} 
+                style={{ height: '100%', width: '100%' }}
+                theme="dark"
+                notMerge={true}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
