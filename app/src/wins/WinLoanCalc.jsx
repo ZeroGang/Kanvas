@@ -164,23 +164,42 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
           }
         }
       },
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          color: textColor,
-          formatter: (value) => `¥${(value / 10000).toFixed(1)}万`
-        },
-        axisLine: {
-          lineStyle: {
-            color: borderColor
+      yAxis: [
+        {
+          type: 'value',
+          position: 'left',
+          axisLabel: {
+            color: textColor,
+            formatter: (value) => `¥${(value / 10000).toFixed(1)}万`
+          },
+          axisLine: {
+            lineStyle: {
+              color: borderColor
+            }
+          },
+          splitLine: {
+            lineStyle: {
+              color: borderColor
+            }
           }
         },
-        splitLine: {
-          lineStyle: {
-            color: borderColor
+        {
+          type: 'value',
+          position: 'right',
+          axisLabel: {
+            color: textColor,
+            formatter: (value) => `¥${(value / 10000).toFixed(1)}万`
+          },
+          axisLine: {
+            lineStyle: {
+              color: borderColor
+            }
+          },
+          splitLine: {
+            show: false
           }
         }
-      },
+      ],
       series: [
         {
           name: t('calcLoanPrincipal'),
@@ -202,7 +221,8 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
                 { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
               ]
             }
-          }
+          },
+          yAxisIndex: 0
         },
         {
           name: t('calcLoanInterest'),
@@ -224,7 +244,8 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
                 { offset: 1, color: 'rgba(239, 68, 68, 0.1)' }
               ]
             }
-          }
+          },
+          yAxisIndex: 0
         },
         {
           name: t('calcLoanRemaining'),
@@ -234,7 +255,7 @@ export default function WinLoanCalc({ t, isOpen, onClose }) {
           itemStyle: {
             color: '#22c55e'
           },
-          yAxisIndex: 0
+          yAxisIndex: 1
         }
       ]
     };
